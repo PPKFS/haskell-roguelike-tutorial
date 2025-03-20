@@ -11,28 +11,9 @@ maintainer:    Avery <thecommunistduck@hotmail.co.uk>
 copyright:     2022-2023 Avery
 category:      Game Development
 build-type:    Simple
-tested-with:   GHC == 9.4.7
+tested-with:   GHC == 9.8.2
 
-common warnin
-
-
-executable hs-rogue-simple
-    main-is:          Main.hs
-
-    default-extensions:
-        LambdaCase
-        OverloadedStrings
-    build-depends:
-        base ^>=4.19.1.0
-        , bearlibterminal
-        , roguefunctor
-        , containers
-        , transformers
-    hs-source-dirs:   app-simple
-    default-language: GHC2021
-    ghc-options: -Wall
-
-executable hs-rogue-full
+executable hs-rogue
     main-is:          Main.hs
 
     default-extensions:
@@ -46,8 +27,9 @@ executable hs-rogue-full
         , bearlibterminal
         , roguefunctor
         , containers
-        , optics
+        , transformers
         , mtl
-    hs-source-dirs: app-full
+    hs-source-dirs:   app
     default-language: GHC2021
     ghc-options: -Wall
+    other-modules: HsRogue.Prelude

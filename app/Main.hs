@@ -1,20 +1,11 @@
 module Main where
 
-
+import HsRogue.Prelude
 import Rogue.Window ( withWindow )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
-import Rogue.Geometry.V2 ( V2(..), withV2 )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import qualified Data.Map as M
 import BearLibTerminal
-    ( Keycode(..),
-      Event(..),
-      WindowEvent(..),
-      terminalClear,
-      terminalPrintText,
-      terminalRefresh )
-import Control.Monad.Trans.State
-import Control.Monad (when)
 
 -- define our screen size in tiles.
 screenSize :: V2
@@ -86,10 +77,6 @@ calculateNewLocation dir v =
 -- as this is the simple version, I don't want to bring in optics so we'll have some helper
 -- functions for modifying components of a V2
 
-modifyX :: (Int -> Int) -> V2 -> V2
-modifyX f (V2 x y) = V2 (f x) y
-modifyY :: (Int -> Int) -> V2 -> V2
-modifyY f (V2 x y) = V2 x (f y)
 
 -- this is our game loop. we want to draw the screen, then handle any events (keyboard/mouse input and window
 -- resizing or closing), and then finally do any game logic updates.
@@ -112,7 +99,7 @@ runLoop = do
   -- a result of type Dimensions. Using `void` is another option!
 
   -- NOTE: this works with Text rather than String, which is why we have OverloadedStrings enabled.
-  _ <- withV2 playerPos terminalPrintText "@"
+  _ <- withV2 playerPos terminalPrint "@"
   -- now we've drawn everything, we call refresh to actually push our changes to be drawn.
   terminalRefresh
 
@@ -129,11 +116,11 @@ runLoop = do
     -- if we get a WindowClose event, then we want to stop running our game loop.
     -- but rather than doing a break or jump, it's nicer to just record that we are expecting to quit at the end of
     -- this loop.
-    WindowEvent WindowClose -> modify (\worldState -> worldState { pendingQuit = True})
+    TkClose -> modify (\worldState -> worldState { pendingQuit = True})
     -- we'll also listen for the Esc key as another way to quit
-    Keypress TkEsc -> modify (\worldState -> worldState { pendingQuit = True})
-    -- if we get another keypress that isn't Esc, we want to check if it's bound to moving in a direction
-    Keypress other -> case asMovement other of
+    TkEscape -> modify (\worldState -> worldState { pendingQuit = True})
+    -- if we get another event (likely a keypress) that isn't Esc, we want to check if it's bound to moving in a direction
+    other -> case asMovement other of
       -- success, the key pressed was indeed a movement direction. we update the player's position
       Just dir -> modify (\worldState ->
         worldState
@@ -141,8 +128,6 @@ runLoop = do
           })
       -- it wasn't an Esc, or a movement direction pressed, so we don't do anything.
       Nothing -> return ()
-    -- if we get another kind of event (either a window resizing or a mouse input) we just want to ignore it for now
-    _ -> return ()
 
   -- game logic
   -- we have none!
