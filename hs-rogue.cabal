@@ -39,3 +39,6 @@ executable hs-rogue
     hs-source-dirs:   app
     default-language: GHC2021
     ghc-options: -Wall
+    other-modules:
+        HsRogue.Prelude
+        HsRogue.Map

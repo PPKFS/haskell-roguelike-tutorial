@@ -15,29 +15,12 @@ import qualified Data.Map as M
 import BearLibTerminal
 import Rogue.Array2D.Boxed
 import Rogue.Colour
-import Rogue.Geometry.Rectangle
-import System.Random.Stateful
+import HsRogue.Map
+import Data.List.NonEmpty
+import Rogue.Geometry.Rectangle (centre)
 
 screenSize :: V2
 screenSize = V2 100 50
-
--- | We want to keep some sort of fixed set of tiles with their relevant properties.
-data TileType = Floor | Wall
-  deriving stock (Eq, Ord, Show, Generic)
-
--- Somethign that represents a renderable character. Just one.
-data Renderable = Renderable
-  { glyph :: Char
-  , foreground :: Colour
-  , background :: Colour
-  } deriving stock (Show, Read, Generic)
-
--- because of immutability we don't need to worry about these being heavyweight or whatever.
-data Tile = Tile
-  { name :: Text
-  , renderable :: Renderable
-  , walkable :: Bool
-  } deriving stock (Generic, Show)
 
 initialPlayerPosition :: V2
 initialPlayerPosition = V2 20 20
@@ -53,18 +36,6 @@ data WorldState = WorldState
 playerRenderable :: Renderable
 playerRenderable = Renderable '@' (fromRGB 0x75 0xa2 0xeb) (Colour 0x00000000)
 
-floorTile :: Tile
-floorTile = Tile "floor" (Renderable '.' (Colour 0xFF008888) (Colour 0x00000000)) True
-
-wallTile :: Tile
-wallTile = Tile "wall" (Renderable '#' (Colour 0xFF00FF00) (Colour 0x00000000)) False
-
-emptyMap :: Int -> V2 -> IO (Array2D Tile)
-emptyMap numberOfWalls size = do
-  let floorMap = replicateArray floorTile size
-  randomWalls <- mapM (const $ uniformRM (V2 0 0, size - V2 1 1) globalStdGen) [1..numberOfWalls]
-  return $ floorMap //@ map (, wallTile) ((rectangleEdges (rectangleFromDimensions (V2 0 0) screenSize)) <> randomWalls)
-
 main :: IO ()
 main = do
   withWindow
@@ -75,9 +46,8 @@ main = do
 
 initGame :: IO WorldState
 initGame = do
-  let (worldRandomProportion :: Double) = 0.2
-  madeMap <- emptyMap (round $ worldRandomProportion * fromIntegral (v2AsArea screenSize)) screenSize
-  return (WorldState initialPlayerPosition madeMap False)
+  (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
+  return (WorldState (centre firstRoom) madeMap False)
 
 data Direction = LeftDir | RightDir | UpDir | DownDir
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
