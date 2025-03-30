@@ -19,17 +19,13 @@ executable hs-rogue
     default-extensions:
         NoImplicitPrelude
         LambdaCase
-        OverloadedLabels
-        DerivingStrategies
         OverloadedStrings
     build-depends:
         base ^>=4.19.1.0
         , bearlibterminal
         , roguefunctor
         , containers
-        , transformers
-        , mtl
+        , random
     hs-source-dirs:   app
     default-language: GHC2021
     ghc-options: -Wall
-    other-modules: HsRogue.Prelude
