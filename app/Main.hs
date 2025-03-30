@@ -3,7 +3,6 @@ module Main where
 import Prelude -- we'll make our own prelude in part 1
 
 import BearLibTerminal
-import BearLibTerminal.Keycodes
 import Control.Monad (when)
 import Rogue.Config
 import Rogue.Events
