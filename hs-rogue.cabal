@@ -22,13 +22,17 @@ executable hs-rogue
     NoImplicitPrelude
     OverloadedStrings
 
-  build-depends:
-    , base             ^>=4.19.1.0
-    , bearlibterminal
-    , containers
-    , random
-    , roguefunctor
-
-  hs-source-dirs:     app
-  default-language:   GHC2021
-  ghc-options:        -Wall
+    default-extensions:
+        NoImplicitPrelude
+        LambdaCase
+        OverloadedStrings
+    build-depends:
+        base ^>=4.19.1.0
+        , bearlibterminal
+        , roguefunctor
+        , containers
+        , random
+        , mtl
+    hs-source-dirs:   app
+    default-language: GHC2021
+    ghc-options: -Wall
