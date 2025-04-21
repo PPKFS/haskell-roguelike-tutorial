@@ -1,7 +1,7 @@
 module HsRogue.Map
   ( TileType(..)
-  , Renderable(..)
   , Tile(..)
+  , Tiles(..)
   , emptyRandomMap
   , testMap
   , digRooms
@@ -18,38 +18,40 @@ import System.Random.Stateful
 import Data.Function
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import HsRogue.Renderable
+
 -- | We want to keep some sort of fixed set of tiles with their relevant properties.
 data TileType = Floor | Wall
-  deriving stock (Eq, Ord, Show, Generic)
-
--- Somethign that represents a renderable character. Just one.
-data Renderable = Renderable
-  { glyph :: Char
-  , foreground :: Colour
-  , background :: Colour
-  } deriving stock (Show, Read, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 -- because of immutability we don't need to worry about these being heavyweight or whatever.
 data Tile = Tile
   { name :: Text
   , renderable :: Renderable
   , walkable :: Bool
-  } deriving stock (Generic, Show)
+  } deriving (Generic, Show)
 
 floorTile :: Tile
-floorTile = Tile "floor" (Renderable '.' (Colour 0xFF008888) (Colour 0x00000000)) True
+floorTile = Tile "floor" floorRenderable True
 
 wallTile :: Tile
-wallTile = Tile "wall" (Renderable '#' (Colour 0xFF00FF00) (Colour 0x00000000)) False
+wallTile = Tile "wall" wallRenderable False
 
-emptyRandomMap :: Int -> V2 -> IO (Array2D Tile)
-emptyRandomMap numberOfWalls size = do
-  let floorMap = replicateArray floorTile size
-  randomWalls <- mapM (const $ uniformRM (V2 0 0, size - V2 1 1) globalStdGen) [1..numberOfWalls]
-  return $ floorMap //@ map (, wallTile) (rectangleEdges (rectangleFromDimensions (V2 0 0) size) <> randomWalls)
+data Tiles = Tiles
+  { tiles :: Array2D Tile
+  , defaultBackgroundColour :: Colour
+  } deriving (Generic, Show)
 
 emptyWallMap :: V2 -> Array2D Tile
 emptyWallMap = replicateArray wallTile
+
+emptyFloorMap :: V2 -> Array2D Tile
+emptyFloorMap = replicateArray floorTile
+
+emptyRandomMap :: Int -> V2 -> IO (Array2D Tile)
+emptyRandomMap numberOfWalls size = do
+  randomWalls <- mapM (const $ uniformRM (V2 0 0, size - V2 1 1) globalStdGen) [1..numberOfWalls]
+  return $ emptyFloorMap size //@ map (, wallTile) (rectangleEdges (rectangleFromDimensions (V2 0 0) size) <> randomWalls)
 
 digRoom :: Rectangle -> Array2D Tile -> Array2D Tile
 digRoom rect m = m //@ map (, floorTile) (rectanglePoints Horizontal rect)

@@ -2,22 +2,28 @@
 module Main where
 
 import HsRogue.Prelude
+import Data.List.NonEmpty
 
-import BearLibTerminal ( terminalClear, terminalRefresh )
+import BearLibTerminal
+    ( terminalClear,
+      terminalRefresh,
+      textColor,
+      terminalSet_
+    )
 import BearLibTerminal.Keycodes
 
+import Rogue.Array2D.Boxed
+import Rogue.Colour ( terminalBkColour, terminalColour, black )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
-import Rogue.Rendering.Print (printText)
+import Rogue.Geometry.Rectangle (centre)
+import Rogue.Rendering.Print (printText_, printChar)
 import Rogue.Window ( withWindow )
 
-import qualified Data.Map as M
-import BearLibTerminal
-import Rogue.Array2D.Boxed
-import Rogue.Colour
 import HsRogue.Map
-import Data.List.NonEmpty
-import Rogue.Geometry.Rectangle (centre)
+import HsRogue.Renderable
+
+import qualified Data.Map as M
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -29,12 +35,9 @@ type Game a = StateT WorldState IO a
 
 data WorldState = WorldState
   { playerPosition :: V2
-  , tileMap :: Array2D Tile
+  , tileMap :: Tiles
   , pendingQuit :: Bool
   }
-
-playerRenderable :: Renderable
-playerRenderable = Renderable '@' (fromRGB 0x75 0xa2 0xeb) (Colour 0x00000000)
 
 main :: IO ()
 main = do
@@ -47,7 +50,7 @@ main = do
 initGame :: IO WorldState
 initGame = do
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
-  return (WorldState (centre firstRoom) madeMap False)
+  return (WorldState (centre firstRoom) (Tiles madeMap black) False)
 
 data Direction = LeftDir | RightDir | UpDir | DownDir
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
@@ -84,7 +87,7 @@ runLoop = do
   terminalClear
   playerPos <- gets playerPosition
   renderMap
-  withV2 playerPos terminalPrint_ (textColor "white" "@")
+  printText_ playerPos (textColor "white" "@")
   terminalRefresh
   _ <- handleEvents Blocking $ \case
     TkClose -> modify (\worldState -> worldState { pendingQuit = True})
@@ -93,7 +96,7 @@ runLoop = do
       Just dir -> do
         w <- get
         let potentialNewLocation = calculateNewLocation dir (playerPosition w)
-            tileAtLocation = (tileMap w) !?@ potentialNewLocation
+            tileAtLocation = tiles (tileMap w) !?@ potentialNewLocation
         case tileAtLocation of
           Just t
             | walkable t ->  modify (\worldState -> worldState { playerPosition = potentialNewLocation })
@@ -107,7 +110,7 @@ renderMap :: Game ()
 renderMap = do
   w <- get
   let es = tileMap w
-  traverseArrayWithCoord_ es $ \p Tile{..} -> do
+  terminalBkColour (defaultBackgroundColour es)
+  traverseArrayWithCoord_ (tiles es) $ \p Tile{..} -> do
     terminalColour (foreground renderable)
-    terminalBkColour (background renderable)
-    withV2 p terminalPut (glyph renderable)
+    printChar p (glyph renderable)
