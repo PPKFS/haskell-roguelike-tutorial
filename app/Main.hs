@@ -69,19 +69,11 @@ asMovement k = k `M.lookup` movementKeys
 
 -- given a direction and a point, calculate the new point that is 1 tile in that direction.
 calculateNewLocation :: Direction -> V2 -> V2
-calculateNewLocation dir v =
-  let updateIt :: V2 -> V2
-      updateIt = case dir of
-        LeftDir -> modifyX (subtract 1)
-        RightDir -> modifyX (+ 1)
-        UpDir -> modifyY (subtract 1)
-        DownDir -> modifyY (+ 1)
-  in
-    updateIt v
-
--- as this is the simple version, I don't want to bring in optics so we'll have some helper
--- functions for modifying components of a V2
-
+calculateNewLocation dir (V2 x y) = case dir of
+  LeftDir -> V2 (x-1) y
+  RightDir -> V2 (x+1) y
+  UpDir -> V2 x (y-1)
+  DownDir -> V2 x (y+1)
 
 -- this is our game loop. we want to draw the screen, then handle any events (keyboard/mouse input and window
 -- resizing or closing), and then finally do any game logic updates.
