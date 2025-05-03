@@ -30,5 +30,5 @@ runLoop = do
     TkResized -> return True
     TkClose -> return False
     TkEscape -> return False
-    _ -> return False
+    _ -> return True
   when (and shouldContinue) runLoop
