@@ -22,7 +22,7 @@ initialPlayerPosition = V2 20 20
 
 -- our Game monad will be a state monad with the current state of the world as we play
 -- on top of the IO monad to handle reading the player's inputs and drawing things to the screen
-type Game a = StateT WorldState IO a
+type Game m a = StateT WorldState m a
 
 -- later this will include things like all the enemies and items in the world and the map
 -- but for now we only need to store the player's position and whether we should quit the game
@@ -34,14 +34,14 @@ data WorldState = WorldState
 
 main :: IO ()
 -- evalState is the "run this computation and return the *value* it computes" state evaluator.
-main = flip evalStateT (WorldState initialPlayerPosition False) $ do
+main = do
   -- withWindow is a wrapper around bracket that handles opening and closing a window
   -- but also makes sure that if we hit an exception (e.g. a SIGKILL or crash) then it
   -- will still clean up used memory and close the window gracefully.
   withWindow
     defaultWindowOptions { size = Just screenSize } -- we use the default window options, except we specify the screen size
     (return ()) -- initialisation logic: we don't have any, so do nothing extra (withWindow opens the window for us)
-    (const runLoop)  -- our game loop here. note that it only runs this once, so we have to do the looping ourselves
+    (const $ void $ evalStateT runLoop (WorldState initialPlayerPosition False))  -- our game loop here. note that it only runs this once, so we have to do the looping ourselves
     (return ()) -- cleanup logic: we also have no extra cleanup logic so do nothing extra (withWindow closes the window for us)
 
 -- we want to separate inputs (WASD or arrows) from the actual logic of compass directions
@@ -77,7 +77,7 @@ calculateNewLocation dir (V2 x y) = case dir of
 
 -- this is our game loop. we want to draw the screen, then handle any events (keyboard/mouse input and window
 -- resizing or closing), and then finally do any game logic updates.
-runLoop :: Game ()
+runLoop :: MonadIO m => Game m ()
 runLoop = do
   -- rendering --
   -- first, we want to clear the screen. if we skip this, it will just re-draw each frame on top of the existing
