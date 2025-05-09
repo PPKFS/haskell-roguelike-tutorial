@@ -31,7 +31,7 @@ screenSize = V2 100 50
 initialPlayerPosition :: V2
 initialPlayerPosition = V2 20 20
 
-type Game m a = StateT WorldState m a
+type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m)
 
 data WorldState = WorldState
   { playerPosition :: V2
@@ -83,10 +83,10 @@ calculateNewLocation dir (V2 x y) = case dir of
   UpDir -> V2 x (y-1)
   DownDir -> V2 x (y+1)
 
-quitAfter :: Monad m => Game m ()
+quitAfter :: MonadState WorldState m => m ()
 quitAfter = modify (\worldState -> worldState { pendingQuit = True})
 
-runLoop :: MonadIO m => Game m ()
+runLoop :: GameMonad m => m ()
 runLoop = do
   terminalSet_ "font: KreativeSquare.ttf, size=24x24"
   terminalClear
@@ -111,7 +111,7 @@ runLoop = do
   shouldContinue <- not <$> gets pendingQuit
   when shouldContinue runLoop
 
-renderMap :: MonadIO m => Game m ()
+renderMap :: GameMonad m => m ()
 renderMap = do
   w <- get
   terminalBkColour (defaultBackgroundColour (tileMap w))
