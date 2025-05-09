@@ -12,20 +12,18 @@ import BearLibTerminal
     )
 import BearLibTerminal.Keycodes
 
-import Rogue.Array2D.Boxed
+import HsRogue.Map
+import HsRogue.MapGen
+import HsRogue.Renderable
+import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_ )
 import Rogue.Colour ( terminalBkColour, terminalColour, black )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.Rectangle (centre)
+import Rogue.Monad ( MonadRogue )
 import Rogue.Rendering.Print (printText_, printChar)
 import Rogue.Window ( withWindow )
-
-import HsRogue.Map
-import HsRogue.Renderable
-
 import qualified Data.Map as M
-import HsRogue.MapGen
-import Rogue.Monad ( MonadRogue )
 
 screenSize :: V2
 screenSize = V2 100 50
