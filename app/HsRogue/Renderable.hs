@@ -6,7 +6,7 @@ module HsRogue.Renderable
   ) where
 
 import HsRogue.Prelude
-import Rogue.Colour
+import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour )
 
 -- Somethign that represents a renderable character. Just one.
 data Renderable = Renderable

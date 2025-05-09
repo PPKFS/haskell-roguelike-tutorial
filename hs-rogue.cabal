@@ -36,4 +36,5 @@ executable hs-rogue
   other-modules:
       HsRogue.Prelude
       HsRogue.Renderable
+      HsRogue.MapGen
       HsRogue.Map

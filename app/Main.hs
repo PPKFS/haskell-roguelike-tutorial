@@ -24,6 +24,8 @@ import HsRogue.Map
 import HsRogue.Renderable
 
 import qualified Data.Map as M
+import HsRogue.MapGen
+import Rogue.Monad ( MonadRogue )
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -31,7 +33,7 @@ screenSize = V2 100 50
 initialPlayerPosition :: V2
 initialPlayerPosition = V2 20 20
 
-type Game a = StateT WorldState IO a
+type Game m a = StateT WorldState m a
 
 data WorldState = WorldState
   { playerPosition :: V2
@@ -47,10 +49,15 @@ main = do
     (evalStateT runLoop)
     (return ())
 
-initGame :: IO WorldState
+initGame :: MonadRogue m => m WorldState
 initGame = do
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
-  return (WorldState (centre firstRoom) (Tiles madeMap black) False)
+  return $
+    WorldState
+      { playerPosition = centre firstRoom
+      , tileMap = Tiles madeMap black
+      , pendingQuit = False
+      }
 
 data Direction = LeftDir | RightDir | UpDir | DownDir
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
@@ -78,17 +85,21 @@ calculateNewLocation dir (V2 x y) = case dir of
   UpDir -> V2 x (y-1)
   DownDir -> V2 x (y+1)
 
-runLoop :: Game ()
+quitAfter :: Monad m => Game m ()
+quitAfter = modify (\worldState -> worldState { pendingQuit = True})
+
+runLoop :: MonadIO m => Game m ()
 runLoop = do
   terminalSet_ "font: KreativeSquare.ttf, size=24x24"
   terminalClear
-  playerPos <- gets playerPosition
   renderMap
+  playerPos <- gets playerPosition
   printText_ playerPos (textColor "white" "@")
+
   terminalRefresh
   _ <- handleEvents Blocking $ \case
-    TkClose -> modify (\worldState -> worldState { pendingQuit = True})
-    TkEscape -> modify (\worldState -> worldState { pendingQuit = True})
+    TkClose -> quitAfter
+    TkEscape -> quitAfter
     other -> case asMovement other of
       Just dir -> do
         w <- get
@@ -102,12 +113,10 @@ runLoop = do
   shouldContinue <- not <$> gets pendingQuit
   when shouldContinue runLoop
 
-
-renderMap :: Game ()
+renderMap :: MonadIO m => Game m ()
 renderMap = do
   w <- get
-  let es = tileMap w
-  terminalBkColour (defaultBackgroundColour es)
-  traverseArrayWithCoord_ (tiles es) $ \p Tile{..} -> do
+  terminalBkColour (defaultBackgroundColour (tileMap w))
+  traverseArrayWithCoord_ (tiles (tileMap w)) $ \p Tile{..} -> do
     terminalColour (foreground renderable)
     printChar p (glyph renderable)
