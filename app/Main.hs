@@ -24,6 +24,9 @@ import Rogue.Monad ( MonadRogue )
 import Rogue.Rendering.Print (printText_, printChar)
 import Rogue.Window ( withWindow )
 import qualified Data.Map as M
+import HsRogue.World
+import Rogue.Objects.Object (Object(Object))
+import HsRogue.Object
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -32,12 +35,6 @@ initialPlayerPosition :: V2
 initialPlayerPosition = V2 20 20
 
 type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m)
-
-data WorldState = WorldState
-  { playerPosition :: V2
-  , tileMap :: Tiles
-  , pendingQuit :: Bool
-  }
 
 main :: IO ()
 main = do
@@ -50,10 +47,13 @@ main = do
 initGame :: MonadRogue m => m WorldState
 initGame = do
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
+  p <- addActor (Object "player") (ObjectData
+    { renderable = playerRenderable
+    , position = centre firstRoom
+    })
   return $
     WorldState
-      { playerPosition = centre firstRoom
-      , tileMap = Tiles madeMap black
+      { tileMap = Tiles madeMap black
       , pendingQuit = False
       }
 
@@ -91,8 +91,7 @@ runLoop = do
   terminalSet_ "font: KreativeSquare.ttf, size=24x24"
   terminalClear
   renderMap
-  playerPos <- gets playerPosition
-  printText_ playerPos (textColor "white" "@")
+  -- playerPos <- gets playerPosition
 
   terminalRefresh
   _ <- handleEvents Blocking $ \case
@@ -101,11 +100,11 @@ runLoop = do
     other -> case asMovement other of
       Just dir -> do
         w <- get
-        let potentialNewLocation = calculateNewLocation dir (playerPosition w)
+        let potentialNewLocation = error "" -- calculateNewLocation dir (playerPosition w)
             tileAtLocation = tiles (tileMap w) !?@ potentialNewLocation
         case tileAtLocation of
           Just t
-            | walkable t ->  modify (\worldState -> worldState { playerPosition = potentialNewLocation })
+            | walkable t ->  modify (\worldState -> worldState {- { playerPosition = potentialNewLocation } -})
           _ -> return ()
       Nothing -> return ()
   shouldContinue <- not <$> gets pendingQuit

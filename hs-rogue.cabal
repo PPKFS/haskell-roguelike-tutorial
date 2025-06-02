@@ -38,3 +38,5 @@ executable hs-rogue
       HsRogue.Renderable
       HsRogue.MapGen
       HsRogue.Map
+      HsRogue.World
+      HsRogue.Object

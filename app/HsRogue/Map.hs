@@ -11,6 +11,7 @@ import HsRogue.Prelude
 import Rogue.Array2D.Boxed ( Array2D )
 import Rogue.Colour ( Colour )
 import HsRogue.Renderable
+import Rogue.Tilemap
 
 -- | We want to keep some sort of fixed set of tiles with their relevant properties.
 data TileType = Floor | Wall
@@ -33,3 +34,9 @@ data Tiles = Tiles
   { tiles :: Array2D Tile
   , defaultBackgroundColour :: Colour
   } deriving (Generic, Show)
+
+instance TileVisibility Tile where
+  visibility = walkable
+
+instance VisibilityMap Tiles where
+  positionBlocksVisibility = positionBlocksVisibility . tiles
