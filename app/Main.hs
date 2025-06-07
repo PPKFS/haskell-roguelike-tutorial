@@ -9,25 +9,27 @@ import BearLibTerminal
       terminalRefresh,
       terminalSet_
     )
+
 import BearLibTerminal.Keycodes
 
 import HsRogue.Map
 import HsRogue.MapGen
+import HsRogue.Object
 import HsRogue.Renderable
+import HsRogue.World
+
 import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_ )
 import Rogue.Colour ( terminalBkColour, terminalColour, black )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.Rectangle (centre)
 import Rogue.Monad ( MonadRogue )
+import Rogue.Objects.Entity ( Entity(..) )
+import Rogue.Objects.Object (objectData)
+import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
 import Rogue.Window ( withWindow )
 import qualified Data.Map as M
-import HsRogue.World
-import Rogue.Objects.Object (objectData)
-import HsRogue.Object
-import Rogue.Objects.Store
-import Rogue.Objects.Entity
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -91,7 +93,6 @@ quitAfter = modify (\worldState -> worldState { pendingQuit = True})
 runLoop :: GameMonad m => m ()
 runLoop = do
   terminalSet_ "font: KreativeSquare.ttf, size=16x16"
-  terminalSet_ "output.vsync=false"
   terminalClear
   renderMap
   renderActors
@@ -116,9 +117,9 @@ runLoop = do
 
 renderMap :: GameMonad m => m ()
 renderMap = do
-  w <- get
-  terminalBkColour (defaultBackgroundColour (tileMap w))
-  traverseArrayWithCoord_ (tiles (tileMap w)) $ \p Tile{..} -> do
+  tm <- gets tileMap
+  terminalBkColour (defaultBackgroundColour tm)
+  traverseArrayWithCoord_ (tiles tm) $ \p Tile{..} -> do
     terminalColour (foreground renderable)
     printChar p (glyph renderable)
 
@@ -126,5 +127,6 @@ renderActors :: GameMonad m => m ()
 renderActors = do
   w <- get
   forM_ (actors w) $ \actor -> do
-    terminalColour (foreground (objectRenderable actor))
-    printChar (position . objectData $ actor) (glyph (objectRenderable actor))
+    let r = objectRenderable actor
+    terminalColour (foreground r)
+    printChar (objectPosition actor) (glyph r)

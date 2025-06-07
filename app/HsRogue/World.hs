@@ -4,16 +4,18 @@ module HsRogue.World
   , getPlayer
   , updateActor
   ) where
-import HsRogue.Object
-import Rogue.Objects.Store
-import HsRogue.Map hiding (renderable)
+
 import HsRogue.Prelude
-import HsRogue.Renderable
-import Rogue.Objects.Object
-import qualified Rogue.Objects.Store as S
-import Rogue.Monad
+
 import Data.Coerce (coerce)
-import Rogue.Objects.Entity
+import HsRogue.Map hiding (renderable)
+import HsRogue.Object
+
+import HsRogue.Renderable
+import Rogue.Monad ( MonadRogue, makeObject )
+import Rogue.Objects.Entity ( Entity(..), HasID(..) )
+import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
+import Rogue.Objects.Store ( Store, unsafeLookup, update, insert )
 
 data WorldState = WorldState
   { player :: ActorEntity
@@ -30,7 +32,7 @@ addActor name r pos = do
         }
   o <- makeObject (ObjectKind "actor") name objectData ()
   acStore <- gets actors
-  let newStore = S.insert (objectId o) o acStore
+  let newStore = insert (objectId o) o acStore
   modify (\w -> w { actors = newStore })
   return (ActorEntity (objectId o))
 

@@ -8,10 +8,11 @@ module HsRogue.Map
   ) where
 
 import HsRogue.Prelude
+import HsRogue.Renderable
+
 import Rogue.Array2D.Boxed ( Array2D )
 import Rogue.Colour ( Colour )
-import HsRogue.Renderable
-import Rogue.Tilemap
+import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..) )
 
 -- | We want to keep some sort of fixed set of tiles with their relevant properties.
 data TileType = Floor | Wall

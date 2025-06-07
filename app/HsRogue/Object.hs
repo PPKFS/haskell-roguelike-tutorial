@@ -5,13 +5,12 @@ module HsRogue.Object
   , Actor
   , ActorEntity(..)
   , ObjectData(..)
-
   ) where
 
 import HsRogue.Prelude
-import HsRogue.Renderable (Renderable)
-import Rogue.Objects.Object as RF
-import Rogue.Objects.Entity
+import HsRogue.Renderable
+import Rogue.Objects.Object as RF ( Object(..) )
+import Rogue.Objects.Entity ( Entity(..) )
 
 data ObjectData = ObjectData
   { position :: V2
