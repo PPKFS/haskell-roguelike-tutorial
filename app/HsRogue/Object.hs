@@ -1,10 +1,17 @@
-module HsRogue.Object where
+module HsRogue.Object
+  ( objectRenderable
+  , objectPosition
+  , moveObject
+  , Actor
+  , ActorEntity(..)
+  , ObjectData(..)
+
+  ) where
 
 import HsRogue.Prelude
 import HsRogue.Renderable (Renderable)
-import qualified Rogue.Objects.Object as RF
+import Rogue.Objects.Object as RF
 import Rogue.Objects.Entity
-import Rogue.Objects.Tag
 
 data ObjectData = ObjectData
   { position :: V2
@@ -15,3 +22,12 @@ type Actor = RF.Object ObjectData ()
 
 newtype ActorEntity = ActorEntity { unActor :: Entity }
   deriving (Eq, Ord, Show, Enum)
+
+objectRenderable :: RF.Object ObjectData a -> Renderable
+objectRenderable = renderable . objectData
+
+objectPosition :: RF.Object ObjectData a -> V2
+objectPosition = position . objectData
+
+moveObject :: V2 -> RF.Object ObjectData a -> RF.Object ObjectData a
+moveObject pos o = o { objectData = (objectData o) {position = pos } }

@@ -7,7 +7,6 @@ import Data.List.NonEmpty
 import BearLibTerminal
     ( terminalClear,
       terminalRefresh,
-      textColor,
       terminalSet_
     )
 import BearLibTerminal.Keycodes
@@ -21,12 +20,14 @@ import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.Rectangle (centre)
 import Rogue.Monad ( MonadRogue )
-import Rogue.Rendering.Print (printText_, printChar)
+import Rogue.Rendering.Print ( printChar)
 import Rogue.Window ( withWindow )
 import qualified Data.Map as M
 import HsRogue.World
-import Rogue.Objects.Object (Object(Object))
+import Rogue.Objects.Object (objectData)
 import HsRogue.Object
+import Rogue.Objects.Store
+import Rogue.Objects.Entity
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -47,15 +48,16 @@ main = do
 initGame :: MonadRogue m => m WorldState
 initGame = do
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
-  p <- addActor (Object "player") (ObjectData
-    { renderable = playerRenderable
-    , position = centre firstRoom
-    })
-  return $
-    WorldState
-      { tileMap = Tiles madeMap black
-      , pendingQuit = False
-      }
+  let addObjectsToWorld = do
+        p <- addActor "player" playerRenderable (centre firstRoom)
+        modify (\w -> w { player = p })
+      initialWorld = (WorldState
+        { tileMap = Tiles madeMap black
+        , pendingQuit = False
+        , actors = emptyStore
+        , player = ActorEntity (Entity (-1))
+        })
+  execStateT addObjectsToWorld initialWorld
 
 data Direction = LeftDir | RightDir | UpDir | DownDir
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
@@ -88,10 +90,11 @@ quitAfter = modify (\worldState -> worldState { pendingQuit = True})
 
 runLoop :: GameMonad m => m ()
 runLoop = do
-  terminalSet_ "font: KreativeSquare.ttf, size=24x24"
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
+  terminalSet_ "output.vsync=false"
   terminalClear
   renderMap
-  -- playerPos <- gets playerPosition
+  renderActors
 
   terminalRefresh
   _ <- handleEvents Blocking $ \case
@@ -100,11 +103,12 @@ runLoop = do
     other -> case asMovement other of
       Just dir -> do
         w <- get
-        let potentialNewLocation = error "" -- calculateNewLocation dir (playerPosition w)
+        playerObject <- getPlayer
+        let potentialNewLocation = calculateNewLocation dir (objectPosition playerObject)
             tileAtLocation = tiles (tileMap w) !?@ potentialNewLocation
         case tileAtLocation of
           Just t
-            | walkable t ->  modify (\worldState -> worldState {- { playerPosition = potentialNewLocation } -})
+            | walkable t -> updateActor playerObject (moveObject potentialNewLocation)
           _ -> return ()
       Nothing -> return ()
   shouldContinue <- not <$> gets pendingQuit
@@ -117,3 +121,10 @@ renderMap = do
   traverseArrayWithCoord_ (tiles (tileMap w)) $ \p Tile{..} -> do
     terminalColour (foreground renderable)
     printChar p (glyph renderable)
+
+renderActors :: GameMonad m => m ()
+renderActors = do
+  w <- get
+  forM_ (actors w) $ \actor -> do
+    terminalColour (foreground (objectRenderable actor))
+    printChar (position . objectData $ actor) (glyph (objectRenderable actor))
