@@ -2,9 +2,14 @@ module HsRogue.Object
   ( objectRenderable
   , objectPosition
   , moveObject
+  , HasActorID(..)
+  , getActor
   , Actor
+  , ActorData(..)
   , ActorEntity(..)
   , ObjectData(..)
+  , HasObjectData(..)
+  , Direction(..)
   ) where
 
 import HsRogue.Prelude
@@ -13,13 +18,38 @@ import Rogue.Objects.Object as RF ( Object(..) )
 import Rogue.Objects.Entity ( Entity(..), HasID(..) )
 
 import Optics
+import Rogue.FieldOfView.Visibility (Viewshed)
+import Rogue.Monad (MonadStore, getObject)
+
+data ActorData = ActorData
+  { objectData :: ObjectData
+  , viewshed :: Viewshed
+  } deriving (Show, Eq, Ord, Generic)
 
 data ObjectData = ObjectData
   { position :: V2
   , renderable :: Renderable
   } deriving (Show, Eq, Ord, Generic)
 
-type Actor = RF.Object ObjectData ()
+class HasObjectData o where
+  objectDataL :: Lens' o ObjectData
+
+class HasActorID o where
+  actorID :: o -> ActorEntity
+
+type Actor = RF.Object ActorData ()
+
+instance HasActorID Actor where
+  actorID = ActorEntity . getID
+
+instance HasActorID ActorEntity where
+  actorID = id
+
+instance HasObjectData (RF.Object ObjectData a) where
+  objectDataL = #objectData
+
+instance HasObjectData Actor where
+  objectDataL = #objectData % #objectData
 
 newtype ActorEntity = ActorEntity { unActor :: Entity }
   deriving (Eq, Ord, Show, Enum)
@@ -27,11 +57,18 @@ newtype ActorEntity = ActorEntity { unActor :: Entity }
 instance HasID ActorEntity where
   getID = unActor
 
-objectRenderable :: Lens' (RF.Object ObjectData a) Renderable
-objectRenderable = #objectData % #renderable
 
-objectPosition :: Lens' (RF.Object ObjectData a) V2
-objectPosition = #objectData % #position
+data Direction = LeftDir | RightDir | UpDir | DownDir | UpRightDir | DownRightDir | UpLeftDir | DownLeftDir
+  deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-moveObject :: V2 -> RF.Object ObjectData a -> RF.Object ObjectData a
+objectRenderable :: HasObjectData o => Lens' o Renderable
+objectRenderable = objectDataL % #renderable
+
+objectPosition :: HasObjectData o => Lens' o V2
+objectPosition = objectDataL % #position
+
+moveObject :: HasObjectData o => V2 -> o -> o
 moveObject pos = objectPosition .~ pos
+
+getActor :: MonadStore Actor m => ActorEntity -> m Actor
+getActor = getObject

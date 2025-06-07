@@ -18,8 +18,13 @@ import HsRogue.Object
 import HsRogue.Renderable
 import HsRogue.World
 
-import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_ )
-import Rogue.Colour ( terminalBkColour, terminalColour, black )
+import HsRogue.Viewshed
+
+import Optics ( to, (%), (^.), use )
+import Optics.State.Operators ((.=))
+
+import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_, replicateArray )
+import Rogue.Colour ( terminalColour, black, desaturate, toGreyscale )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.Rectangle (centre)
@@ -27,10 +32,10 @@ import Rogue.Monad ( MonadRogue, MonadStore )
 import Rogue.Objects.Entity ( Entity(..) )
 import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
+import Rogue.Tilemap (MonadTiles(..))
 import Rogue.Window ( withWindow )
+
 import qualified Data.Map as M
-import Optics
-import Optics.State.Operators ((.=))
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -38,7 +43,7 @@ screenSize = V2 100 50
 initialPlayerPosition :: V2
 initialPlayerPosition = V2 20 20
 
-type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m, MonadStore Actor m)
+type GameMonad m = (MonadTiles Tile m, MonadRogue m, MonadIO m, MonadState WorldState m, MonadStore Actor m)
 
 main :: IO ()
 main = do
@@ -48,22 +53,27 @@ main = do
     (evalStateT runLoop)
     (return ())
 
-initGame :: MonadRogue m => m WorldState
+initGame :: (MonadIO m, MonadRogue m) => m WorldState
 initGame = do
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
   let addObjectsToWorld = do
-        p <- addActor "player" playerRenderable (centre firstRoom)
+        p <- addActor "player" playerRenderable (centre firstRoom) 20
         #player .= p
+        makeAllViewshedsDirty
+        updateViewsheds
       initialWorld = (WorldState
-        { tileMap = Tiles madeMap black
+        { tileMap = Tiles
+          { tiles = madeMap
+          , defaultBackgroundColour = black
+          , revealedTiles = replicateArray False screenSize
+          }
         , pendingQuit = False
         , actors = emptyStore
         , player = ActorEntity (Entity (-1))
+        , dirtyViewsheds = []
         })
   execStateT addObjectsToWorld initialWorld
-
-data Direction = LeftDir | RightDir | UpDir | DownDir
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 movementKeys :: M.Map Keycode Direction
 movementKeys = M.fromList
@@ -80,24 +90,15 @@ movementKeys = M.fromList
 asMovement :: Keycode -> Maybe Direction
 asMovement k = k `M.lookup` movementKeys
 
--- given a direction and a point, calculate the new point that is 1 tile in that direction.
-calculateNewLocation :: Direction -> V2 -> V2
-calculateNewLocation dir (V2 x y) = case dir of
-  LeftDir -> V2 (x-1) y
-  RightDir -> V2 (x+1) y
-  UpDir -> V2 x (y-1)
-  DownDir -> V2 x (y+1)
-
 quitAfter :: MonadState WorldState m => m ()
 quitAfter = #pendingQuit .= True
 
 runLoop :: GameMonad m => m ()
 runLoop = do
-  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
+  everyTurn
   terminalClear
   renderMap
   renderActors
-
   terminalRefresh
   _ <- handleEvents Blocking $ \case
     TkClose -> quitAfter
@@ -109,7 +110,7 @@ runLoop = do
         tileAtLocation <- use $ #tileMap % #tiles % Optics.to (!?@ potentialNewLocation)
         case tileAtLocation of
           Just t
-            | walkable t -> updateActor playerObject (moveObject potentialNewLocation)
+            | walkable t -> moveActorInDirection playerObject dir
           _ -> return ()
       Nothing -> return ()
   shouldContinue <- not <$> gets pendingQuit
@@ -117,11 +118,19 @@ runLoop = do
 
 renderMap :: GameMonad m => m ()
 renderMap = do
-  tm <- gets tileMap
-  terminalBkColour (defaultBackgroundColour tm)
-  traverseArrayWithCoord_ (tiles tm) $ \p Tile{..} -> do
-    terminalColour (foreground renderable)
-    printChar p (glyph renderable)
+  w <- get
+  let es = w ^. #tileMap
+  traverseArrayWithCoord_ (es ^. #revealedTiles) $ \p rev -> when rev $ do
+    t <- getTileM @Tile p
+    let r = t ^. #renderable
+    terminalColour (desaturate $ toGreyscale $ r ^. #foreground)
+    printChar p (r ^. #glyph)
+  playerViewshed <- getVisibleTiles
+  forM_ playerViewshed $ \p -> do
+    t <- getTileM @Tile p
+    let r = t ^. #renderable
+    terminalColour (r ^. #foreground)
+    printChar p (r ^. #glyph)
 
 renderActors :: GameMonad m => m ()
 renderActors = do
@@ -130,3 +139,7 @@ renderActors = do
     let r = actor ^. objectRenderable
     terminalColour (foreground r)
     printChar (actor ^. objectPosition) (glyph r)
+
+everyTurn :: GameMonad m => m ()
+everyTurn = do
+  updateViewsheds

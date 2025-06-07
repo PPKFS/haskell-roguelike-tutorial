@@ -33,6 +33,7 @@ wallTile = Tile "wall" wallRenderable False
 
 data Tiles = Tiles
   { tiles :: Array2D Tile
+  , revealedTiles :: Array2D Bool
   , defaultBackgroundColour :: Colour
   } deriving (Generic, Show)
 
