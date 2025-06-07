@@ -12,7 +12,7 @@ import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour )
 data Renderable = Renderable
   { glyph :: Char
   , foreground :: Colour
-  } deriving (Show, Read, Generic)
+  } deriving (Show, Read, Ord, Eq, Generic)
 
 playerRenderable :: Renderable
 playerRenderable = Renderable '@' ivory
