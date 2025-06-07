@@ -7,15 +7,16 @@ module HsRogue.World
 
 import HsRogue.Prelude
 
-import Data.Coerce (coerce)
 import HsRogue.Map hiding (renderable)
 import HsRogue.Object
 
 import HsRogue.Renderable
-import Rogue.Monad ( MonadRogue, makeObject )
-import Rogue.Objects.Entity ( Entity(..), HasID(..) )
+import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..) )
+import Rogue.Objects.Entity ( HasID(..) )
 import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
-import Rogue.Objects.Store ( Store, unsafeLookup, update, insert )
+import Rogue.Objects.Store ( Store )
+import Optics
+import Optics.State.Operators
 
 data WorldState = WorldState
   { player :: ActorEntity
@@ -24,22 +25,26 @@ data WorldState = WorldState
   , pendingQuit :: Bool
   } deriving (Generic)
 
-addActor :: (MonadState WorldState m, MonadRogue m) => Text -> Renderable -> V2 -> m ActorEntity
+instance Monad m => MonadStore Actor (StateT WorldState m) where
+  getObject e = do
+    mbA <- use $ #actors % at (getID e)
+    return (fromMaybe (error $ "failed to find actor with ID " <> show (getID e)) mbA)
+  setObject o = #actors % at (objectId o) ?= o
+
+addActor :: (MonadStore Actor m, MonadRogue m) => Text -> Renderable -> V2 -> m ActorEntity
 addActor name r pos = do
   let objectData = ObjectData
         { position = pos
         , renderable = r
         }
   o <- makeObject (ObjectKind "actor") name objectData ()
-  acStore <- gets actors
-  let newStore = insert (objectId o) o acStore
-  modify (\w -> w { actors = newStore })
+  setObject o
   return (ActorEntity (objectId o))
 
-getPlayer :: MonadState WorldState m => m Actor
+getPlayer :: (MonadState WorldState m, MonadStore Actor m) => m Actor
 getPlayer = do
-  w <- get
-  return $ unsafeLookup (coerce $ player w) (actors w)
+  p <- use #player
+  getObject p
 
 updateActor :: (MonadState WorldState m, HasID a) => a -> (Actor -> Actor) -> m ()
-updateActor a f = modify (\w -> w { actors = update (coerce $ getID a) f (actors w) })
+updateActor a f = #actors % at (getID a) % _Just %= f

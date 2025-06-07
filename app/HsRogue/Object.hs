@@ -10,23 +10,28 @@ module HsRogue.Object
 import HsRogue.Prelude
 import HsRogue.Renderable
 import Rogue.Objects.Object as RF ( Object(..) )
-import Rogue.Objects.Entity ( Entity(..) )
+import Rogue.Objects.Entity ( Entity(..), HasID(..) )
+
+import Optics
 
 data ObjectData = ObjectData
   { position :: V2
   , renderable :: Renderable
-  }
+  } deriving (Show, Eq, Ord, Generic)
 
 type Actor = RF.Object ObjectData ()
 
 newtype ActorEntity = ActorEntity { unActor :: Entity }
   deriving (Eq, Ord, Show, Enum)
 
-objectRenderable :: RF.Object ObjectData a -> Renderable
-objectRenderable = renderable . objectData
+instance HasID ActorEntity where
+  getID = unActor
 
-objectPosition :: RF.Object ObjectData a -> V2
-objectPosition = position . objectData
+objectRenderable :: Lens' (RF.Object ObjectData a) Renderable
+objectRenderable = #objectData % #renderable
+
+objectPosition :: Lens' (RF.Object ObjectData a) V2
+objectPosition = #objectData % #position
 
 moveObject :: V2 -> RF.Object ObjectData a -> RF.Object ObjectData a
-moveObject pos o = o { objectData = (objectData o) {position = pos } }
+moveObject pos = objectPosition .~ pos

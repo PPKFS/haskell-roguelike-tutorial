@@ -21,6 +21,7 @@ executable hs-rogue
     LambdaCase
     NoImplicitPrelude
     OverloadedStrings
+    OverloadedLabels
   build-depends:
       base ^>=4.19.1.0
       , bearlibterminal
@@ -30,6 +31,7 @@ executable hs-rogue
       , random
       , mtl
       , random
+      , optics
       , text
   hs-source-dirs:   app
   default-language: GHC2021

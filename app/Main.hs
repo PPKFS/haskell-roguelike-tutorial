@@ -23,13 +23,14 @@ import Rogue.Colour ( terminalBkColour, terminalColour, black )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.Rectangle (centre)
-import Rogue.Monad ( MonadRogue )
+import Rogue.Monad ( MonadRogue, MonadStore )
 import Rogue.Objects.Entity ( Entity(..) )
-import Rogue.Objects.Object (objectData)
 import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
 import Rogue.Window ( withWindow )
 import qualified Data.Map as M
+import Optics
+import Optics.State.Operators ((.=))
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -37,7 +38,7 @@ screenSize = V2 100 50
 initialPlayerPosition :: V2
 initialPlayerPosition = V2 20 20
 
-type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m)
+type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m, MonadStore Actor m)
 
 main :: IO ()
 main = do
@@ -52,7 +53,7 @@ initGame = do
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
   let addObjectsToWorld = do
         p <- addActor "player" playerRenderable (centre firstRoom)
-        modify (\w -> w { player = p })
+        #player .= p
       initialWorld = (WorldState
         { tileMap = Tiles madeMap black
         , pendingQuit = False
@@ -88,7 +89,7 @@ calculateNewLocation dir (V2 x y) = case dir of
   DownDir -> V2 x (y+1)
 
 quitAfter :: MonadState WorldState m => m ()
-quitAfter = modify (\worldState -> worldState { pendingQuit = True})
+quitAfter = #pendingQuit .= True
 
 runLoop :: GameMonad m => m ()
 runLoop = do
@@ -103,10 +104,9 @@ runLoop = do
     TkEscape -> quitAfter
     other -> case asMovement other of
       Just dir -> do
-        w <- get
         playerObject <- getPlayer
-        let potentialNewLocation = calculateNewLocation dir (objectPosition playerObject)
-            tileAtLocation = tiles (tileMap w) !?@ potentialNewLocation
+        let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
+        tileAtLocation <- use $ #tileMap % #tiles % Optics.to (!?@ potentialNewLocation)
         case tileAtLocation of
           Just t
             | walkable t -> updateActor playerObject (moveObject potentialNewLocation)
@@ -125,8 +125,8 @@ renderMap = do
 
 renderActors :: GameMonad m => m ()
 renderActors = do
-  w <- get
-  forM_ (actors w) $ \actor -> do
-    let r = objectRenderable actor
+  actors <- use #actors
+  forM_ actors $ \actor -> do
+    let r = actor ^. objectRenderable
     terminalColour (foreground r)
-    printChar (objectPosition actor) (glyph r)
+    printChar (actor ^. objectPosition) (glyph r)
