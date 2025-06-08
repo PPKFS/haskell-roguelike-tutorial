@@ -1,5 +1,4 @@
 A repo for the parts of the Haskell roguelike tutorial available at https://ppkfs.github.io. Each part of the tutorial is fully contained and iterative. Individual parts on their own are available in individual branches (thanks, `git-subrepo`!).
-
 The structure of the parts has been shamelessly borrowed from the *fantastic* Rust+`rltk/bracket` tutorial available [here](https://bfnightly.bracketproductions.com/).
 - Section 0: Before we begin...
   - Part 0.0 - Setting up the project. Printing a character to the screen.
@@ -7,10 +6,12 @@ The structure of the parts has been shamelessly borrowed from the *fantastic* Ru
   - Part 1.1 - Moving around with the keyboard. `mtl`.
 **--- this is up to where the written tutorial parts end. ---**
   - Part 2 - Making some various basic maps. Better module organisation.
+  ![alt text](screenshots/part-2.png)
   - Part 3a - Introducing game objects and the `Rogue.Objects` modules. Hitting the edge of dealing with 'vanilla' Haskell.
 **--- this is up to where the code has been reviewed and neatened up. ---**
   - Part 3b - Introducing `optics` - finally a solution to how awkward it is to do nested record updates (and state updates!).
   - Part 4 - Field of view and exploration.
+  ![alt text](screenshots/part-4.png)
 **--- this is up to where the code has been finished. ---**
   - Part 5 - Monsters and logging.
 ---
