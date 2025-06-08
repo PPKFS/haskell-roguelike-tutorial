@@ -1,0 +1,6 @@
+cradle:
+  cabal:
+    - path: "app"
+      component: "executable:hs-rogue"
+    - path: "roguefunctor"
+      component: "library:roguefunctor"
