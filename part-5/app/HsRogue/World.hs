@@ -18,7 +18,7 @@ import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
 import Rogue.Objects.Store ( Store )
 import Optics ( use, (%), At(at), Ixed(ix), _Just, to )
 import Optics.State.Operators ( (%=), (?=), (.=) )
-import Rogue.FieldOfView.Visibility
+import Rogue.FieldOfView.Visibility ( emptyViewshed )
 import Rogue.Tilemap (MonadTiles(..), Tilemap(..))
 import Rogue.Array2D.Boxed ((//@))
 import HsRogue.Object
@@ -42,7 +42,7 @@ instance Monad m => MonadStore Actor (StateT WorldState m) where
     return (fromMaybe (error $ "failed to find actor with ID " <> show (getID e)) mbA)
   setObject o = #actors % at (objectId o) ?= o
 
-addActor :: (MonadStore Actor m, MonadRogue m) => ObjectKind -> Text -> Renderable -> V2 -> Int -> m ActorEntity
+addActor :: (MonadStore Actor m, MonadState WorldState m, MonadRogue m) => ObjectKind -> Text -> Renderable -> V2 -> Int -> m ActorEntity
 addActor kind name r pos viewLim = do
   let actorData = ActorData
         { objectData = ObjectData
@@ -53,6 +53,7 @@ addActor kind name r pos viewLim = do
         }
   o <- makeObject kind name actorData ()
   setObject o
+  #tileMap %= placeActorOnTile o
   return (ActorEntity (objectId o))
 
 getPlayer :: (MonadState WorldState m, MonadStore Actor m) => m Actor
