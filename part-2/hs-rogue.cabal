@@ -1,0 +1,40 @@
+cabal-version: 3.6
+name:          hs-rogue
+version:       0.0.2
+synopsis:      Roguelike tutorial in Haskell.
+description:   Part 2 of the roguelike tutorial in Haskell.
+homepage:
+  https://github.com/PPKFS/roguelike-tutorial-parts/tree/part-2
+
+bug-reports:   https://github.com/PPKFS/roguelike-tutorial-parts/issues
+license:       MIT
+author:        Avery
+maintainer:    Avery <ppkfs@outlook.com>
+copyright:     2025 Avery
+category:      Game
+build-type:    Simple
+tested-with:   GHC ==9.6.7 || ==9.8.2
+
+executable hs-rogue
+  main-is:            Main.hs
+  default-extensions:
+    LambdaCase
+    NoImplicitPrelude
+    OverloadedStrings
+  build-depends:
+      base ^>=4.19.1.0
+      , bearlibterminal
+      , roguefunctor
+      , containers
+      , random
+      , mtl
+      , random
+      , text
+  hs-source-dirs:   app
+  default-language: GHC2021
+  ghc-options: -Wall
+  other-modules:
+      HsRogue.Prelude
+      HsRogue.Renderable
+      HsRogue.MapGen
+      HsRogue.Map

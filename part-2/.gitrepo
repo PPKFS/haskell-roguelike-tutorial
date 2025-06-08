@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/ppkfs/haskell-roguelike-tutorial
+	branch = part-2
+	commit = 251d343f9e3ae2bd3b937f65739fa6aa71fe5a3a
+	parent = 1d785b9e70cf7be8dc84607972219b0e9eb297dc
+	method = merge
+	cmdver = 0.4.9
