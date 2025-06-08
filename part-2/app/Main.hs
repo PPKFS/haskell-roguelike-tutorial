@@ -88,7 +88,7 @@ quitAfter = modify (\worldState -> worldState { pendingQuit = True})
 
 runLoop :: GameMonad m => m ()
 runLoop = do
-  terminalSet_ "font: KreativeSquare.ttf, size=24x24"
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
   terminalClear
   renderMap
   playerPos <- gets playerPosition
