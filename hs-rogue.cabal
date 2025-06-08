@@ -1,6 +1,6 @@
 cabal-version: 3.6
-name:          hs-rogue-part3a
-version:       0.0.3.1
+name:          hs-rogue-part3b
+version:       0.0.3.2
 synopsis:      Roguelike tutorial in Haskell.
 description:   Part 3a of the roguelike tutorial in Haskell.
 homepage:
