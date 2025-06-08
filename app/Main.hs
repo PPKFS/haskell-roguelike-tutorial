@@ -20,7 +20,7 @@ import HsRogue.World
 
 import HsRogue.Viewshed
 
-import Optics ( to, (%), (^.), use )
+import Optics ( to, (%), (^.), use, At (..) )
 import Optics.State.Operators ((.=))
 
 import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_, replicateArray )
@@ -36,6 +36,7 @@ import Rogue.Tilemap (MonadTiles(..))
 import Rogue.Window ( withWindow )
 import qualified Data.Text as T
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -56,21 +57,19 @@ main = do
 initGame :: (MonadIO m, MonadRogue m) => m WorldState
 initGame = do
   terminalSet_ "font: KreativeSquare.ttf, size=16x16"
-  (madeMap, (firstRoom:|otherRooms)) <- roomsAndCorridorsMap 30 4 12 screenSize
+  (madeMap, firstRoom:|otherRooms) <- roomsAndCorridorsMap 30 4 12 screenSize
   let initialWorld = (WorldState
         { tileMap = Tiles
           { tiles = madeMap
           , defaultBackgroundColour = black
           , revealedTiles = replicateArray False screenSize
+          , tileContents = M.empty
           }
         , pendingQuit = False
         , actors = emptyStore
         , player = ActorEntity (Entity (-1))
         , dirtyViewsheds = []
         })
-
-
-
       addObjectsToWorld = do
         p <- addActor playerKind "player" playerRenderable (centre firstRoom) 20
         #player .= p
@@ -119,9 +118,10 @@ runLoop = do
         playerObject <- getPlayer
         let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
         tileAtLocation <- use $ #tileMap % #tiles % Optics.to (!?@ potentialNewLocation)
+        isTileOccupied <- use $ #tileMap % #tileContents % at potentialNewLocation
         case tileAtLocation of
           Just t
-            | walkable t -> moveActorInDirection playerObject dir
+            | walkable t && isNothing isTileOccupied -> moveActorInDirection playerObject dir
           _ -> return ()
       Nothing -> return ()
   shouldContinue <- not <$> gets pendingQuit
@@ -146,7 +146,8 @@ renderMap = do
 renderActors :: GameMonad m => m ()
 renderActors = do
   actors <- use #actors
-  forM_ actors $ \actor -> do
+  tiles <- getVisibleTiles
+  forM_ actors $ \actor -> when (actor ^. objectPosition `elem` tiles) $ do
     let r = actor ^. objectRenderable
     terminalColour (foreground r)
     printChar (actor ^. objectPosition) (glyph r)

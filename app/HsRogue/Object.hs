@@ -10,6 +10,7 @@ module HsRogue.Object
   , ObjectData(..)
   , HasObjectData(..)
   , Direction(..)
+  , AnyEntity(..)
   , playerKind
   , actorKind
   , monsterKind
@@ -83,3 +84,10 @@ monsterKind = ObjectKind "monster"
 
 playerKind :: ObjectKind
 playerKind = ObjectKind "player"
+
+data AnyEntity =
+  AnyActorEntity ActorEntity
+  -- AnyItemEntity ItemEntity
+  -- AnyTileEntity TileEntity
+  deriving (Show, Eq, Generic)
+
