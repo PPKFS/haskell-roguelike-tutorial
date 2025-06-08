@@ -10,11 +10,14 @@ module HsRogue.Object
   , ObjectData(..)
   , HasObjectData(..)
   , Direction(..)
+  , playerKind
+  , actorKind
+  , monsterKind
   ) where
 
 import HsRogue.Prelude
 import HsRogue.Renderable
-import Rogue.Objects.Object as RF ( Object(..) )
+import Rogue.Objects.Object as RF ( Object(..), ObjectKind (..) )
 import Rogue.Objects.Entity ( Entity(..), HasID(..) )
 
 import Optics
@@ -57,7 +60,6 @@ newtype ActorEntity = ActorEntity { unActor :: Entity }
 instance HasID ActorEntity where
   getID = unActor
 
-
 data Direction = LeftDir | RightDir | UpDir | DownDir | UpRightDir | DownRightDir | UpLeftDir | DownLeftDir
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
@@ -72,3 +74,12 @@ moveObject pos = objectPosition .~ pos
 
 getActor :: MonadStore Actor m => ActorEntity -> m Actor
 getActor = getObject
+
+actorKind :: ObjectKind
+actorKind = ObjectKind "actor"
+
+monsterKind :: ObjectKind
+monsterKind = ObjectKind "monster"
+
+playerKind :: ObjectKind
+playerKind = ObjectKind "player"

@@ -11,12 +11,12 @@ import HsRogue.Prelude
 
 import HsRogue.Map hiding (renderable)
 
-import HsRogue.Renderable
-import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..), modifyObject )
+import HsRogue.Renderable ( Renderable )
+import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..) )
 import Rogue.Objects.Entity ( HasID(..) )
 import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
 import Rogue.Objects.Store ( Store )
-import Optics ( use, (%), At(at), Ixed(ix), _Just, to, (^.), (.~) )
+import Optics ( use, (%), At(at), Ixed(ix), _Just, to )
 import Optics.State.Operators ( (%=), (?=), (.=) )
 import Rogue.FieldOfView.Visibility
 import Rogue.Tilemap (MonadTiles(..), Tilemap(..))
@@ -42,8 +42,8 @@ instance Monad m => MonadStore Actor (StateT WorldState m) where
     return (fromMaybe (error $ "failed to find actor with ID " <> show (getID e)) mbA)
   setObject o = #actors % at (objectId o) ?= o
 
-addActor :: (MonadStore Actor m, MonadRogue m) => Text -> Renderable -> V2 -> Int -> m ActorEntity
-addActor name r pos viewLim = do
+addActor :: (MonadStore Actor m, MonadRogue m) => ObjectKind -> Text -> Renderable -> V2 -> Int -> m ActorEntity
+addActor kind name r pos viewLim = do
   let actorData = ActorData
         { objectData = ObjectData
           { position = pos
@@ -51,7 +51,7 @@ addActor name r pos viewLim = do
           }
         , viewshed = emptyViewshed viewLim
         }
-  o <- makeObject (ObjectKind "actor") name actorData ()
+  o <- makeObject kind name actorData ()
   setObject o
   return (ActorEntity (objectId o))
 

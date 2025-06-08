@@ -3,10 +3,11 @@ module HsRogue.Renderable
   , playerRenderable
   , floorRenderable
   , wallRenderable
+  , goblinRenderable
   ) where
 
 import HsRogue.Prelude
-import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour )
+import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour, oliveDrab )
 
 -- Somethign that represents a renderable character. Just one.
 data Renderable = Renderable
@@ -22,3 +23,6 @@ floorRenderable = Renderable '.' lightSlateGray
 
 wallRenderable :: Renderable
 wallRenderable = Renderable '#' mediumSeaGreen
+
+goblinRenderable :: Renderable
+goblinRenderable = Renderable 'g' oliveDrab

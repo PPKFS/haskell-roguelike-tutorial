@@ -34,7 +34,7 @@ import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
 import Rogue.Tilemap (MonadTiles(..))
 import Rogue.Window ( withWindow )
-
+import qualified Data.Text as T
 import qualified Data.Map as M
 
 screenSize :: V2
@@ -56,13 +56,8 @@ main = do
 initGame :: (MonadIO m, MonadRogue m) => m WorldState
 initGame = do
   terminalSet_ "font: KreativeSquare.ttf, size=16x16"
-  (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
-  let addObjectsToWorld = do
-        p <- addActor "player" playerRenderable (centre firstRoom) 20
-        #player .= p
-        makeAllViewshedsDirty
-        updateViewsheds
-      initialWorld = (WorldState
+  (madeMap, (firstRoom:|otherRooms)) <- roomsAndCorridorsMap 30 4 12 screenSize
+  let initialWorld = (WorldState
         { tileMap = Tiles
           { tiles = madeMap
           , defaultBackgroundColour = black
@@ -73,6 +68,22 @@ initGame = do
         , player = ActorEntity (Entity (-1))
         , dirtyViewsheds = []
         })
+
+
+
+      addObjectsToWorld = do
+        p <- addActor playerKind "player" playerRenderable (centre firstRoom) 20
+        #player .= p
+        enumerateFromM_ 1 otherRooms $ \i room -> do
+          let centreOfRoom = centre room
+              goblinName = "Goblin #" <> showText i
+          addActor monsterKind goblinName goblinRenderable centreOfRoom 5
+
+
+        makeAllViewshedsDirty
+        updateViewsheds
+
+
   execStateT addObjectsToWorld initialWorld
 
 movementKeys :: M.Map Keycode Direction
