@@ -1,4 +1,9 @@
 packages:
   part-0/hs-rogue.cabal
   part-1/hs-rogue.cabal
+  part-2/hs-rogue.cabal
+  part-3a/hs-rogue.cabal
+  part-3b/hs-rogue.cabal
+  part-4/hs-rogue.cabal
+  part-5/hs-rogue.cabal
   roguefunctor/roguefunctor.cabal

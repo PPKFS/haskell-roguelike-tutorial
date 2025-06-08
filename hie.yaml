@@ -1,0 +1,18 @@
+cradle:
+  cabal:
+    - path: "part-0/app"
+      component: "hs-rogue-part0:executable:hs-rogue"
+    - path: "part-1/app"
+      component: "hs-rogue-part1:executable:hs-rogue"
+    - path: "part-2/app"
+      component: "hs-rogue-part2:executable:hs-rogue"
+    - path: "part-3a/app"
+      component: "hs-rogue-part3a:executable:hs-rogue"
+    - path: "part-3b/app"
+      component: "hs-rogue-part3b:executable:hs-rogue"
+    - path: "part-4/app"
+      component: "hs-rogue-part4:executable:hs-rogue"
+    - path: "part-5/app"
+      component: "hs-rogue-part5:executable:hs-rogue"
+    - path: "roguefunctor"
+      component: "library:roguefunctor"
