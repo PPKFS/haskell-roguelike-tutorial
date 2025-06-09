@@ -76,5 +76,4 @@ moveActorInDirection ::
 moveActorInDirection e dir = do
   o <- getActor (actorID e)
   let newPos = calculateNewLocation dir $ o ^. objectPosition
-  modifyObject o (objectPosition .~ newPos)
-  makeViewshedDirty (actorID e)
+  moveActor o newPos
