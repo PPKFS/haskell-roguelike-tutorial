@@ -52,6 +52,20 @@ getVisibleTiles = do
   pl <- getPlayer
   return (pl ^. #objectData % #viewshed % #visibleTiles)
 
+moveActor ::
+  MonadState WorldState m
+  => MonadStore Actor m
+  => HasActorID a
+  => a
+  -> V2
+  -> m ()
+moveActor e newPos = do
+  o <- getActor (actorID e)
+  modifyObject o (objectPosition .~ newPos)
+  #tileMap %= clearTile (o ^. objectPosition)
+  #tileMap %= placeActorOnTile newPos o
+  makeViewshedDirty (actorID e)
+
 moveActorInDirection ::
   MonadState WorldState m
   => MonadStore Actor m

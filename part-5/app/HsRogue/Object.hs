@@ -9,8 +9,10 @@ module HsRogue.Object
   , ActorEntity(..)
   , ObjectData(..)
   , HasObjectData(..)
+  , MonsterSpecifics(..)
+  , MonsterBehaviour(..)
+  , ActorSpecifics(..)
   , Direction(..)
-  , AnyEntity(..)
   , playerKind
   , actorKind
   , monsterKind
@@ -41,7 +43,21 @@ class HasObjectData o where
 class HasActorID o where
   actorID :: o -> ActorEntity
 
-type Actor = RF.Object ActorData ()
+type Actor = RF.Object ActorData ActorSpecifics
+
+data ActorSpecifics =
+  PlayerSpecifics ()
+  | MonsterS MonsterSpecifics
+  deriving (Show, Eq, Ord, Generic)
+
+data MonsterSpecifics = MonsterSpecifics
+  { insult :: Text
+  , behaviour :: MonsterBehaviour
+  , seenPlayer :: Bool
+  } deriving (Show, Eq, Ord, Generic)
+
+data MonsterBehaviour = AttackPlayer | FleeFromPlayer
+  deriving (Show, Eq, Ord, Generic, Enum, Bounded)
 
 instance HasActorID Actor where
   actorID = ActorEntity . getID
@@ -84,10 +100,4 @@ monsterKind = ObjectKind "monster"
 
 playerKind :: ObjectKind
 playerKind = ObjectKind "player"
-
-data AnyEntity =
-  AnyActorEntity ActorEntity
-  -- AnyItemEntity ItemEntity
-  -- AnyTileEntity TileEntity
-  deriving (Show, Eq, Generic)
 

@@ -20,7 +20,7 @@ import HsRogue.World
 
 import HsRogue.Viewshed
 
-import Optics ( to, (%), (^.), use, At (..) )
+import Optics ( to, (%), (^.), use, At (..), (^?), view )
 import Optics.State.Operators ((.=))
 
 import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_, replicateArray )
@@ -32,11 +32,13 @@ import Rogue.Monad ( MonadRogue, MonadStore )
 import Rogue.Objects.Entity ( Entity(..) )
 import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
-import Rogue.Tilemap (MonadTiles(..))
+import Rogue.Tilemap
 import Rogue.Window ( withWindow )
-import qualified Data.Text as T
 import qualified Data.Map as M
-import qualified Data.Set as S
+import Rogue.FieldOfView.Visibility
+import Rogue.AStar (findPath)
+import Rogue.Random
+import qualified Data.Text as T
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -71,14 +73,19 @@ initGame = do
         , dirtyViewsheds = []
         })
       addObjectsToWorld = do
-        p <- addActor playerKind "player" playerRenderable (centre firstRoom) 20
+        p <- addActor playerKind "player" playerRenderable (centre firstRoom) 20 (PlayerSpecifics ())
         #player .= p
         enumerateFromM_ 1 otherRooms $ \i room -> do
           let centreOfRoom = centre room
               goblinName = "Goblin #" <> showText i
+          randomBehaviour <- randomEnum
+          randomInsult <- choose
+            [ "that your mother smells of elderberries"
+            , "that your father was a hamster"
+            , "\"I fart in your general direction\""
+            ]
           addActor monsterKind goblinName goblinRenderable centreOfRoom 5
-
-
+            (MonsterS $ MonsterSpecifics randomInsult randomBehaviour False)
         makeAllViewshedsDirty
         updateViewsheds
 
@@ -116,13 +123,10 @@ runLoop = do
     other -> case asMovement other of
       Just dir -> do
         playerObject <- getPlayer
+        tm <- use #tileMap
         let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
-        tileAtLocation <- use $ #tileMap % #tiles % Optics.to (!?@ potentialNewLocation)
-        isTileOccupied <- use $ #tileMap % #tileContents % at potentialNewLocation
-        case tileAtLocation of
-          Just t
-            | walkable t && isNothing isTileOccupied -> moveActorInDirection playerObject dir
-          _ -> return ()
+            canWalkOnTile = positionAllowsMovement tm potentialNewLocation
+        when canWalkOnTile $ moveActorInDirection playerObject dir
       Nothing -> return ()
   shouldContinue <- not <$> gets pendingQuit
   when shouldContinue runLoop
@@ -152,6 +156,31 @@ renderActors = do
     terminalColour (foreground r)
     printChar (actor ^. objectPosition) (glyph r)
 
+monstersThink :: GameMonad m => m ()
+monstersThink = do
+  actors <- use #actors
+  playerLocation <- view objectPosition <$> getPlayer
+  forM_ actors $ \actor ->
+    whenJust (actor ^? #specifics % #_MonsterS) $ \monsterStuff ->
+    when (playerLocation `elem` actor ^. #objectData % #viewshed % #visibleTiles) $ do
+      insultPlayer (actor ^. #name) (insult monsterStuff)
+      case behaviour monsterStuff of
+        AttackPlayer -> do
+          m <- use #tileMap
+          r <- findPath m (actor ^. objectPosition) playerLocation
+          case r of
+            Just (nextStep:_:_) ->
+              when (positionAllowsMovement m nextStep) $
+                moveActor actor nextStep
+            _ -> return ()
+          return ()
+        FleeFromPlayer -> return ()
+      return ()
+
+insultPlayer :: MonadIO m => Text -> Text -> m ()
+insultPlayer name insult = liftIO $ putStrLn $ T.unpack $ name <> " yells " <> insult  <> "!"
+
 everyTurn :: GameMonad m => m ()
 everyTurn = do
+  monstersThink
   updateViewsheds

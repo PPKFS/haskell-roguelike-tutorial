@@ -13,12 +13,13 @@ import HsRogue.Renderable
 
 import Rogue.Array2D.Boxed ( Array2D, (!?@) )
 import Rogue.Colour ( Colour )
-import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..) )
+import Rogue.Tilemap
 import HsRogue.Object
 import qualified Data.Set as S
 import Optics
 import qualified Data.Map as M
 import Rogue.Objects.Entity (HasID(..))
+import Debug.Trace (traceShow)
 
 -- | We want to keep some sort of fixed set of tiles with their relevant properties.
 data TileType = Floor | Wall
@@ -50,8 +51,15 @@ instance TileVisibility Tile where
 instance VisibilityMap Tiles where
   positionBlocksVisibility = positionBlocksVisibility . tiles
 
-placeActorOnTile :: Actor -> Tiles -> Tiles
-placeActorOnTile a = #tileContents % at (a ^. objectPosition) ?~ actorID a
+instance WalkabilityMap Tiles where
+  positionAllowsMovement tm pos =
+    let mbTileAtPosition = tiles tm !?@ pos
+        tileIsWalkable = maybe False walkable mbTileAtPosition
+        tileIsNotOccupied = isNothing (tileContents tm ^. at pos)
+    in tileIsWalkable && tileIsNotOccupied
+
+placeActorOnTile :: HasActorID a => V2 -> a -> Tiles -> Tiles
+placeActorOnTile pos a = #tileContents % at pos ?~ actorID a
 
 clearTile :: V2 -> Tiles -> Tiles
 clearTile pos = #tileContents % at pos .~ Nothing
