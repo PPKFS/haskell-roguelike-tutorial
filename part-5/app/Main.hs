@@ -7,7 +7,7 @@ import Data.List.NonEmpty
 import BearLibTerminal
     ( terminalClear,
       terminalRefresh,
-      terminalSet_
+      terminalSet_, terminalState
     )
 
 import BearLibTerminal.Keycodes
@@ -20,15 +20,15 @@ import HsRogue.World
 
 import HsRogue.Viewshed
 
-import Optics ( to, (%), (^.), use, At (..), (^?), view )
+import Optics
 import Optics.State.Operators ((.=))
 
-import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_, replicateArray )
+import Rogue.Array2D.Boxed ( traverseArrayWithCoord_, replicateArray )
 import Rogue.Colour ( terminalColour, black, desaturate, toGreyscale )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.Rectangle (centre)
-import Rogue.Monad ( MonadRogue, MonadStore )
+import Rogue.Monad ( MonadRogue, MonadStore, modifyObject )
 import Rogue.Objects.Entity ( Entity(..) )
 import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
@@ -39,6 +39,8 @@ import Rogue.FieldOfView.Visibility
 import Rogue.AStar (findPath)
 import Rogue.Random
 import qualified Data.Text as T
+import Rogue.Events
+import qualified Data.Set as S
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -53,7 +55,7 @@ main = do
   withWindow
     defaultWindowOptions { size = Just screenSize }
     initGame
-    (evalStateT runLoop)
+    (evalStateT (runLoop True))
     (return ())
 
 initGame :: (MonadIO m, MonadRogue m) => m WorldState
@@ -88,48 +90,60 @@ initGame = do
             (MonsterS $ MonsterSpecifics randomInsult randomBehaviour False)
         makeAllViewshedsDirty
         updateViewsheds
-
-
   execStateT addObjectsToWorld initialWorld
 
-movementKeys :: M.Map Keycode Direction
+movementKeys :: M.Map InputEvent Direction
 movementKeys = M.fromList
-  [ (TkA, LeftDir)
-  , (TkS, DownDir)
-  , (TkW, UpDir)
-  , (TkD, RightDir)
-  , (TkUp, UpDir)
-  , (TkDown, DownDir)
-  , (TkLeft, LeftDir)
-  , (TkRight, RightDir)
+  [ (PressedKey TkA, LeftDir)
+  , (PressedKey TkS, DownDir)
+  , (PressedKey TkW, UpDir)
+  , (PressedKey TkD, RightDir)
+  , (PressedKey TkUp, UpDir)
+  , (PressedKey TkDown, DownDir)
+  , (PressedKey TkLeft, LeftDir)
+  , (PressedKey TkRight, RightDir)
+  , (PressedKey TkLeft `WithModifier` TkShift, UpLeftDir)
+  , (PressedKey TkUp `WithModifier` TkShift, UpRightDir)
+  , (PressedKey TkDown `WithModifier` TkShift, DownLeftDir)
+  , (PressedKey TkRight `WithModifier` TkShift, DownRightDir)
   ]
 
-asMovement :: Keycode -> Maybe Direction
+modifierKeys :: S.Set Keycode
+modifierKeys = S.fromList [TkShift]
+
+asMovement :: InputEvent -> Maybe Direction
 asMovement k = k `M.lookup` movementKeys
 
-quitAfter :: MonadState WorldState m => m ()
-quitAfter = #pendingQuit .= True
+quitAfter :: MonadState WorldState m => m Bool
+quitAfter = do
+  #pendingQuit .= True
+  return False
 
-runLoop :: GameMonad m => m ()
-runLoop = do
-  everyTurn
-  terminalClear
-  renderMap
-  renderActors
-  terminalRefresh
-  _ <- handleEvents Blocking $ \case
+runLoop :: GameMonad m => Bool -> m ()
+runLoop shouldUpdate = do
+  when shouldUpdate $ do
+    everyTurn
+    terminalClear
+    renderMap
+    renderActors
+    terminalRefresh
+  didAnything <- fmap or $ handleEvents Blocking $ \case
     TkClose -> quitAfter
     TkEscape -> quitAfter
-    other -> case asMovement other of
-      Just dir -> do
-        playerObject <- getPlayer
-        tm <- use #tileMap
-        let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
-            canWalkOnTile = positionAllowsMovement tm potentialNewLocation
-        when canWalkOnTile $ moveActorInDirection playerObject dir
-      Nothing -> return ()
+
+    other -> do
+      keystate <- makeEvent modifierKeys other
+      case asMovement keystate of
+        Just dir -> do
+          playerObject <- getPlayer
+          tm <- use #tileMap
+          let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
+              canWalkOnTile = positionAllowsMovement tm potentialNewLocation
+          when canWalkOnTile $ moveActorInDirection playerObject dir
+          return canWalkOnTile
+        Nothing -> return False
   shouldContinue <- not <$> gets pendingQuit
-  when shouldContinue runLoop
+  when shouldContinue (runLoop didAnything)
 
 renderMap :: GameMonad m => m ()
 renderMap = do
@@ -161,21 +175,25 @@ monstersThink = do
   actors <- use #actors
   playerLocation <- view objectPosition <$> getPlayer
   forM_ actors $ \actor ->
-    whenJust (actor ^? #specifics % #_MonsterS) $ \monsterStuff ->
-    when (playerLocation `elem` actor ^. #objectData % #viewshed % #visibleTiles) $ do
-      insultPlayer (actor ^. #name) (insult monsterStuff)
-      case behaviour monsterStuff of
-        AttackPlayer -> do
-          m <- use #tileMap
-          r <- findPath m (actor ^. objectPosition) playerLocation
-          case r of
-            Just (nextStep:_:_) ->
-              when (positionAllowsMovement m nextStep) $
-                moveActor actor nextStep
-            _ -> return ()
-          return ()
-        FleeFromPlayer -> return ()
-      return ()
+    whenJust (actor ^? #specifics % #_MonsterS) $ \monsterStuff -> do
+      let canSeePlayer = playerLocation `elem` actor ^. #objectData % #viewshed % #visibleTiles
+      when (canSeePlayer && not (seenPlayer monsterStuff)) $ do
+        insultPlayer (actor ^. #name) (insult monsterStuff)
+        modifyObject actor (#specifics % #_MonsterS % #seenPlayer .~ True)
+      when (not canSeePlayer && seenPlayer monsterStuff) $
+        modifyObject actor (#specifics % #_MonsterS % #seenPlayer .~ False)
+      when canSeePlayer $ do
+        case behaviour monsterStuff of
+          AttackPlayer -> do
+            m <- use #tileMap
+            r <- findPath m (actor ^. objectPosition) playerLocation
+            case r of
+              Just (nextStep:_:_) ->
+                when (positionAllowsMovement m nextStep) $
+                  moveActor actor nextStep
+              _ -> return ()
+            return ()
+          FleeFromPlayer -> return ()
 
 insultPlayer :: MonadIO m => Text -> Text -> m ()
 insultPlayer name insult = liftIO $ putStrLn $ T.unpack $ name <> " yells " <> insult  <> "!"
