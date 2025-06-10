@@ -13,7 +13,8 @@ The structure of the parts has been shamelessly borrowed from the *fantastic* Ru
   - Part 4 - Field of view and exploration.
   ![alt text](screenshots/part-4.png)
 **--- this is up to where the code has been finished. ---**
-  - Part 5 - Monsters and logging.
+  - Part 5 - Monsters, pathfinding, and some logging.
+  ![alt text](image.png)
 ---
 
 everything after this part is the roadmap!
