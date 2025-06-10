@@ -38,7 +38,7 @@ updateViewshed e = do
   p <- use #player
   tm <- use #tileMap
   let viewshed = o ^. #objectData % #viewshed
-  let fov = calculateFov tm (o ^. objectPosition) (range viewshed)
+  let fov = calculateFov tm (o ^. objectPosition) (range viewshed + 1)
   updateActor o (#objectData % #viewshed % #visibleTiles .~ fov)
   when (p == e) $
     let newlyRevealedTiles = map (,True) (S.toList fov)
