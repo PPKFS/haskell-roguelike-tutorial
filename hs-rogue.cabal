@@ -22,7 +22,7 @@ executable hs-rogue
     NoImplicitPrelude
     OverloadedStrings
   build-depends:
-      base ^>=4.19.1.0
+      base >=4.19.1.0
       , bearlibterminal
       , roguefunctor
       , containers
