@@ -5,12 +5,14 @@ import Prelude -- we'll make our own prelude in part 1
 import BearLibTerminal ( terminalRefresh )
 -- note that pattern synonyms don't like manual imports
 import BearLibTerminal.Keycodes
+
 import Control.Monad (when)
+import Control.Monad.IO.Class (MonadIO(..))
+
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
 import Rogue.Geometry.V2 ( V2(..) )
 import Rogue.Window ( withWindow )
-import Control.Monad.IO.Class (MonadIO(..))
 
 screenSize :: V2
 screenSize = V2 100 50
