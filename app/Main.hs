@@ -80,14 +80,13 @@ initGame = do
         enumerateFromM_ 1 otherRooms $ \i room -> do
           let centreOfRoom = centre room
               goblinName = "Goblin #" <> showText i
-          randomBehaviour <- randomEnum
           randomInsult <- choose
             [ "that your mother smells of elderberries"
             , "that your father was a hamster"
             , "\"I fart in your general direction\""
             ]
           addActor monsterKind goblinName goblinRenderable centreOfRoom 5
-            (MonsterS $ MonsterSpecifics randomInsult randomBehaviour False)
+            (MonsterS $ MonsterSpecifics randomInsult False)
         makeAllViewshedsDirty
         updateViewsheds
   execStateT addObjectsToWorld initialWorld
@@ -183,17 +182,15 @@ monstersThink = do
       when (not canSeePlayer && seenPlayer monsterStuff) $
         modifyObject actor (#specifics % #_MonsterS % #seenPlayer .~ False)
       when canSeePlayer $ do
-        case behaviour monsterStuff of
-          AttackPlayer -> do
-            m <- use #tileMap
-            r <- findPath m (actor ^. objectPosition) playerLocation
-            case r of
-              Just (nextStep:_:_) ->
-                when (positionAllowsMovement m nextStep) $
-                  moveActor actor nextStep
-              _ -> return ()
-            return ()
-          FleeFromPlayer -> return ()
+        m <- use #tileMap
+        r <- findPath m (actor ^. objectPosition) playerLocation
+        case r of
+          Just (nextStep:_:_) -> do
+            when (positionAllowsMovement m nextStep) $
+              moveActor actor nextStep
+          Just (thePlayerIsAdjacent:_) -> do
+
+          _ -> return ()
 
 insultPlayer :: MonadIO m => Text -> Text -> m ()
 insultPlayer name insult = liftIO $ putStrLn $ T.unpack $ name <> " yells " <> insult  <> "!"
