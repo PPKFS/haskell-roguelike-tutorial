@@ -14,5 +14,7 @@ cradle:
       component: "hs-rogue-part4:executable:hs-rogue"
     - path: "part-5/app"
       component: "hs-rogue-part5:executable:hs-rogue"
+    - path: "part-6/app"
+      component: "hs-rogue-part6:executable:hs-rogue"
     - path: "roguefunctor"
       component: "library:roguefunctor"

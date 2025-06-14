@@ -6,5 +6,6 @@ packages:
   part-3b/hs-rogue.cabal
   part-4/hs-rogue.cabal
   part-5/hs-rogue.cabal
+  part-6/hs-rogue.cabal
   roguefunctor/roguefunctor.cabal
   /Users/avery/bearlibterminal-hs/bearlibterminal.cabal

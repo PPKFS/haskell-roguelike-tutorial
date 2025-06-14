@@ -12,17 +12,16 @@ The structure of the parts has been shamelessly borrowed from the *fantastic* Ru
   - Part 3b - Introducing `optics` - finally a solution to how awkward it is to do nested record updates (and state updates!).
   - Part 4 - Field of view and exploration.
   ![alt text](screenshots/part-4.png)
-**--- this is up to where the code has been finished. ---**
-  - Part 5 - Monsters, pathfinding, and some logging.
+  - Part 5 - Monsters, pathfinding, and diagonal movement.
   ![alt text](image.png)
+**--- this is up to where the code has been finished. ---**
+  - Part 6 - Combat, killing things, getting killed. Modelling inputs as actions and events.
 ---
 
 everything after this part is the roadmap!
 
 ---
--
-  - Part 6 - Combat, killing things, getting killed. Modelling inputs as actions and events.
-  - Part 7 - UI and info panels. Message logs. A camera separate from the map. Mouse support and tooltips.
+- - Part 7 - UI and info panels. Message logs. A camera separate from the map. Mouse support and tooltips.
   - Part 8 - Items, inventory, making spawning more interesting. Using/picking up/dropping things.
   - Part 9 - Ranged damage and scrolls. Targeting. Status and AoE effects.
   - Part 10 - Saving/Loading. Adding a title screen. More levels. Bigger levels.
