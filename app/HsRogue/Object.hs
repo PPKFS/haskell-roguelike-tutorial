@@ -16,6 +16,10 @@ module HsRogue.Object
   , playerKind
   , actorKind
   , monsterKind
+
+  , CombatStats(..)
+  , playerCombatStats
+  , goblinCombatStats
   ) where
 
 import HsRogue.Prelude
@@ -29,7 +33,15 @@ import Rogue.Monad (MonadStore, getObject)
 
 data ActorData = ActorData
   { objectData :: ObjectData
+  , combat :: Combat
   , viewshed :: Viewshed
+  } deriving (Show, Eq, Ord, Generic)
+
+data CombatStats = CombatStats
+  { maxHp :: Int
+  , currentHp :: Int
+  , attack :: Int
+  , defense :: Int
   } deriving (Show, Eq, Ord, Generic)
 
 data ObjectData = ObjectData
@@ -52,7 +64,6 @@ data ActorSpecifics =
 
 data MonsterSpecifics = MonsterSpecifics
   { insult :: Text
-  , behaviour :: MonsterBehaviour
   , seenPlayer :: Bool
   } deriving (Show, Eq, Ord, Generic)
 
@@ -101,3 +112,20 @@ monsterKind = ObjectKind "monster"
 playerKind :: ObjectKind
 playerKind = ObjectKind "player"
 
+goblinCombatStats :: CombatStats
+goblinCombatStats =
+  CombatStats
+    { maxHp = 10
+    , currentHp = 10
+    , attack = 3
+    , defense = 1
+    }
+
+playerCombatStats :: CombatStats
+playerCombatStats =
+  CombatStats
+    { maxHp = 30
+    , currentHp = 30
+    , attack = 5
+    , defense = 2
+    }

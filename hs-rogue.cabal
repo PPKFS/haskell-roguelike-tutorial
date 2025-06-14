@@ -1,8 +1,8 @@
 cabal-version: 3.6
-name:          hs-rogue-part5
-version:       0.0.5.0
+name:          hs-rogue-part6
+version:       0.0.6.0
 synopsis:      Roguelike tutorial in Haskell.
-description:   Part 5 of the roguelike tutorial in Haskell.
+description:   Part 6 of the roguelike tutorial in Haskell.
 homepage:
   https://github.com/PPKFS/roguelike-tutorial-parts/tree/part-2
 
@@ -24,7 +24,7 @@ executable hs-rogue
     OverloadedLabels
     DuplicateRecordFields
   build-depends:
-      base ^>=4.19.1.0
+      base >=4.19.1.0
       , bearlibterminal
       , enummapset
       , roguefunctor
