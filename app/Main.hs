@@ -6,8 +6,8 @@ import BearLibTerminal ( terminalRefresh )
 -- note that pattern synonyms don't like manual imports
 import BearLibTerminal.Keycodes
 
-import Control.Monad (when)
-import Control.Monad.IO.Class (MonadIO(..))
+import Control.Monad ( when )
+import Control.Monad.IO.Class ( MonadIO(..) )
 
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
 import Rogue.Events ( BlockingMode(..), handleEvents )
@@ -20,7 +20,7 @@ screenSize = V2 100 50
 main :: IO ()
 main =
   withWindow
-  defaultWindowOptions { size = Just screenSize }
+  defaultWindowOptions { size = Just screenSize, title = Just "HsRogue - Part 0" }
   (return ()) -- no init logic
   (const $ liftIO runLoop)
   (return ()) -- no shutdown logic
@@ -30,7 +30,6 @@ runLoop = do
   terminalRefresh
   -- event handling
   shouldContinue <- handleEvents Blocking $ \case
-    TkResized -> return True
     TkClose -> return False
     TkEscape -> return False
     _ -> return True
