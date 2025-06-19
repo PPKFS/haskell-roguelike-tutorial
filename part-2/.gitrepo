@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/ppkfs/haskell-roguelike-tutorial
 	branch = part-2
-	commit = 3f18c4e310bd33de9d76dc481f647b96fb50a513
+	commit = f763395e6c449f289fe1aaa9db6e409a951ec1cd
 	parent = 34d2d9ebe2d85dd820f4313e71e15a40519a6a8b
 	method = merge
 	cmdver = 0.4.9
