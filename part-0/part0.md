@@ -74,7 +74,7 @@ My primary objective for this tutorial is to write *easily understandable* Haske
 
 The rest of this part is setting up an empty cabal project, installing the relevant libraries, and verifying that indeed the hell of library paths has been solved.
 
-I'm going to assume you have a working Haskell setup already. `ghcup` is almost certainly your best bet for doing it all painlessly.
+I'm going to assume you have a working Haskell setup already. `ghcup` is almost certainly your best bet for doing it all painlessly. I've tested the code with GHC 9.8.2 and with 9.12.2, so it should be fine with 9.10 and probably 9.4/9.6.
 
 ## Installing `bearlibterminal`
 
