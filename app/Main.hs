@@ -29,7 +29,7 @@ main =
   withWindow
     defaultWindowOptions { size = Just screenSize, title = Just "HsRogue - Part 1" }
     (return ()) -- no init logic
-    (const $ void $ evalStateT runLoop (WorldState initialPlayerPosition False))
+    (const $ evalStateT runLoop (WorldState initialPlayerPosition False))
     (return ()) -- no shutdown logic
 
 data Direction = LeftDir | RightDir | UpDir | DownDir
