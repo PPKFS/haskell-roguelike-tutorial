@@ -7,16 +7,16 @@ module HsRogue.World
 
 import HsRogue.Prelude
 
-import HsRogue.Map hiding (renderable)
-import HsRogue.Object
-
-import HsRogue.Renderable
 import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..) )
 import Rogue.Objects.Entity ( HasID(..) )
 import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
 import Rogue.Objects.Store ( Store )
-import Optics
-import Optics.State.Operators
+import Optics.State.Operators ( (%=), (?=) )
+
+import HsRogue.Map hiding ( renderable )
+import HsRogue.Object
+
+import HsRogue.Renderable
 
 data WorldState = WorldState
   { player :: ActorEntity

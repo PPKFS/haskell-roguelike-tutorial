@@ -8,17 +8,15 @@ module HsRogue.Map
   ) where
 
 import HsRogue.Prelude
-import HsRogue.Renderable
-
 import Rogue.Array2D.Boxed ( Array2D )
 import Rogue.Colour ( Colour )
 import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..) )
 
--- | We want to keep some sort of fixed set of tiles with their relevant properties.
+import HsRogue.Renderable
+
 data TileType = Floor | Wall
   deriving (Eq, Ord, Show, Generic)
 
--- because of immutability we don't need to worry about these being heavyweight or whatever.
 data Tile = Tile
   { name :: Text
   , renderable :: Renderable

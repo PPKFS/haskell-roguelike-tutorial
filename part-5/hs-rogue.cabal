@@ -13,7 +13,7 @@ maintainer:    Avery <ppkfs@outlook.com>
 copyright:     2025 Avery
 category:      Game
 build-type:    Simple
-tested-with:   GHC ==9.6.7 || ==9.8.2
+tested-with:   GHC ==9.12.2 || ==9.8.2
 
 executable hs-rogue
   main-is:            Main.hs

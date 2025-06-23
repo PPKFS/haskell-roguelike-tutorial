@@ -12,11 +12,11 @@ import HsRogue.Prelude
 import HsRogue.Map hiding (renderable)
 
 import HsRogue.Renderable
-import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..), modifyObject )
+import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..) )
 import Rogue.Objects.Entity ( HasID(..) )
 import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
 import Rogue.Objects.Store ( Store )
-import Optics ( use, (%), At(at), Ixed(ix), _Just, to, (^.), (.~) )
+import Optics ( use, (%), At(at), Ixed(ix), _Just, to )
 import Optics.State.Operators ( (%=), (?=), (.=) )
 import Rogue.FieldOfView.Visibility
 import Rogue.Tilemap (MonadTiles(..), Tilemap(..))

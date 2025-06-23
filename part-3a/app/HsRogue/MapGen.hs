@@ -8,7 +8,6 @@ module HsRogue.MapGen
   , PlannedCorridor(..)
   , digHorizontalTunnel
   , digVerticalTunnel
-
   ) where
 
 import HsRogue.Prelude

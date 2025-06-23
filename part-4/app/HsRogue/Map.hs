@@ -23,7 +23,7 @@ data Tile = Tile
   { name :: Text
   , renderable :: Renderable
   , walkable :: Bool
-  } deriving (Generic, Show)
+  } deriving (Generic, Eq, Ord, Show)
 
 floorTile :: Tile
 floorTile = Tile "floor" floorRenderable True
@@ -35,7 +35,7 @@ data Tiles = Tiles
   { tiles :: Array2D Tile
   , revealedTiles :: Array2D Bool
   , defaultBackgroundColour :: Colour
-  } deriving (Generic, Show)
+  } deriving (Generic, Eq, Ord, Show)
 
 instance TileVisibility Tile where
   visibility = walkable
