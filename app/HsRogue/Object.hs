@@ -12,8 +12,6 @@ import HsRogue.Renderable
 import Rogue.Objects.Object as RF ( Object(..) )
 import Rogue.Objects.Entity ( Entity(..), HasID(..) )
 
-import Optics
-
 data ObjectData = ObjectData
   { position :: V2
   , renderable :: Renderable
@@ -22,7 +20,7 @@ data ObjectData = ObjectData
 type Actor = RF.Object ObjectData ()
 
 newtype ActorEntity = ActorEntity { unActor :: Entity }
-  deriving (Eq, Ord, Show, Enum)
+  deriving (Eq, Ord, Show, Generic, Enum)
 
 instance HasID ActorEntity where
   getID = unActor

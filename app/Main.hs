@@ -2,15 +2,26 @@
 module Main where
 
 import HsRogue.Prelude
-import Data.List.NonEmpty
 
-import BearLibTerminal
-    ( terminalClear,
-      terminalRefresh,
-      terminalSet_
-    )
+import Data.List.NonEmpty ( NonEmpty(..) )
+
+import BearLibTerminal ( terminalClear, terminalRefresh, terminalSet_ )
 
 import BearLibTerminal.Keycodes
+
+import Optics.State.Operators ((.=))
+
+import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_ )
+import Rogue.Colour ( terminalBkColour, terminalColour, black )
+import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
+import Rogue.Events ( BlockingMode(..), handleEvents_ )
+import Rogue.Geometry.Rectangle (centre)
+import Rogue.Monad ( MonadRogue, MonadStore )
+import Rogue.Objects.Entity ( Entity(..) )
+import Rogue.Objects.Store ( emptyStore )
+import Rogue.Rendering.Print ( printChar)
+import Rogue.Window ( withWindow )
+
 
 import HsRogue.Map
 import HsRogue.MapGen
@@ -18,19 +29,7 @@ import HsRogue.Object
 import HsRogue.Renderable
 import HsRogue.World
 
-import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_ )
-import Rogue.Colour ( terminalBkColour, terminalColour, black )
-import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
-import Rogue.Events ( BlockingMode(..), handleEvents )
-import Rogue.Geometry.Rectangle (centre)
-import Rogue.Monad ( MonadRogue, MonadStore )
-import Rogue.Objects.Entity ( Entity(..) )
-import Rogue.Objects.Store ( emptyStore )
-import Rogue.Rendering.Print ( printChar)
-import Rogue.Window ( withWindow )
 import qualified Data.Map as M
-import Optics
-import Optics.State.Operators ((.=))
 
 screenSize :: V2
 screenSize = V2 100 50
@@ -43,7 +42,7 @@ type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m, MonadStore
 main :: IO ()
 main = do
   withWindow
-    defaultWindowOptions { size = Just screenSize }
+    defaultWindowOptions { size = Just screenSize, title = Just "HsRogue - Part 3b" }
     initGame
     (evalStateT runLoop)
     (return ())
@@ -88,8 +87,11 @@ calculateNewLocation dir (V2 x y) = case dir of
   UpDir -> V2 x (y-1)
   DownDir -> V2 x (y+1)
 
-quitAfter :: MonadState WorldState m => m ()
-quitAfter = #pendingQuit .= True
+pendQuit :: MonadState WorldState m => m ()
+pendQuit = #pendingQuit .= True
+
+getTileAtLocation :: MonadState WorldState m => V2 -> m (Maybe Tile)
+getTileAtLocation loc = use $ #tileMap % #tiles % to (!?@ loc)
 
 runLoop :: GameMonad m => m ()
 runLoop = do
@@ -99,25 +101,25 @@ runLoop = do
   renderActors
 
   terminalRefresh
-  _ <- handleEvents Blocking $ \case
-    TkClose -> quitAfter
-    TkEscape -> quitAfter
+  handleEvents_ Blocking $ \case
+    TkClose -> pendQuit
+    TkEscape -> pendQuit
     other -> case asMovement other of
       Just dir -> do
         playerObject <- getPlayer
         let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
-        tileAtLocation <- use $ #tileMap % #tiles % Optics.to (!?@ potentialNewLocation)
+        tileAtLocation <- getTileAtLocation potentialNewLocation
         case tileAtLocation of
           Just t
             | walkable t -> updateActor playerObject (moveObject potentialNewLocation)
           _ -> return ()
       Nothing -> return ()
-  shouldContinue <- not <$> gets pendingQuit
-  when shouldContinue runLoop
+  shouldQuit <- gets pendingQuit
+  unless shouldQuit runLoop
 
 renderMap :: GameMonad m => m ()
 renderMap = do
-  tm <- gets tileMap
+  tm <- use #tileMap
   terminalBkColour (defaultBackgroundColour tm)
   traverseArrayWithCoord_ (tiles tm) $ \p Tile{..} -> do
     terminalColour (foreground renderable)
