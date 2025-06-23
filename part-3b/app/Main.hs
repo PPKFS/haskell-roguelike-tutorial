@@ -47,8 +47,9 @@ main = do
     (evalStateT runLoop)
     (return ())
 
-initGame :: MonadRogue m => m WorldState
+initGame :: (MonadIO m, MonadRogue m) => m WorldState
 initGame = do
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
   let addObjectsToWorld = do
         p <- addActor "player" playerRenderable (centre firstRoom)
@@ -95,7 +96,6 @@ getTileAtLocation loc = use $ #tileMap % #tiles % to (!?@ loc)
 
 runLoop :: GameMonad m => m ()
 runLoop = do
-  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
   terminalClear
   renderMap
   renderActors

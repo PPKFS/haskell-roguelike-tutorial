@@ -45,8 +45,9 @@ main =
     (evalStateT runLoop)
     (return ())
 
-initGame :: MonadRogue m => m WorldState
+initGame :: (MonadIO m, MonadRogue m) => m WorldState
 initGame = do
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
   (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
   return $
     WorldState
@@ -85,7 +86,6 @@ pendQuit = modify (\worldState -> worldState { pendingQuit = True })
 
 runLoop :: GameMonad m => m ()
 runLoop = do
-  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
   terminalClear
   renderMap
   playerPos <- gets playerPosition

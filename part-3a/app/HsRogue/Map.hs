@@ -21,7 +21,7 @@ data Tile = Tile
   { name :: Text
   , renderable :: Renderable
   , walkable :: Bool
-  } deriving (Generic, Show)
+  } deriving (Eq, Ord, Show, Generic)
 
 floorTile :: Tile
 floorTile = Tile "floor" floorRenderable True
