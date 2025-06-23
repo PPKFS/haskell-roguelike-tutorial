@@ -16,13 +16,20 @@ social:
   bluesky: "ppkfs@bsky.social"
 ---
 
+Map:
+
 ```haskell
+
+import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..) )
+
 instance TileVisibility Tile where
   visibility = walkable
 
 instance VisibilityMap Tiles where
   positionBlocksVisibility = positionBlocksVisibility . tiles
 ```
+
+All of Object
 
 ```haskell
 module HsRogue.Object
@@ -58,6 +65,8 @@ objectPosition = position . objectData
 moveObject :: V2 -> RF.Object ObjectData a -> RF.Object ObjectData a
 moveObject pos o = o { objectData = (objectData o) {position = pos } }
 ```
+
+All of World
 
 ```haskell
 module HsRogue.World
@@ -105,4 +114,50 @@ getPlayer = do
 
 updateActor :: (MonadState WorldState m, HasID a) => a -> (Actor -> Actor) -> m ()
 updateActor a f = modify (\w -> w { actors = update (coerce $ getID a) f (actors w) })
+```
+
+```haskell
+import Rogue.Objects.Entity ( Entity(..) )
+import Rogue.Objects.Store ( emptyStore )
+import Rogue.Rendering.Print ( printChar )
+
+import HsRogue.Object
+
+import HsRogue.World
+
+let addObjectsToWorld = do
+        p <- addActor "player" playerRenderable (centre firstRoom)
+        modify (\w -> w { player = p })
+      initialWorld = (WorldState
+        { tileMap = Tiles madeMap black
+        , pendingQuit = False
+        , actors = emptyStore
+        , player = ActorEntity (Entity (-1))
+        })
+  execStateT addObjectsToWorld initialWorld
+
+runLoop :: GameMonad m => m ()
+runLoop = do
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
+  terminalClear
+  renderMap
+  renderActors
+
+Just dir -> do
+        w <- get
+        playerObject <- getPlayer
+        let potentialNewLocation = calculateNewLocation dir (objectPosition playerObject)
+            tileAtLocation = tiles (tileMap w) !?@ potentialNewLocation
+        case tileAtLocation of
+          Just t
+            | walkable t -> updateActor playerObject (moveObject potentialNewLocation)
+
+renderActors :: GameMonad m => m ()
+renderActors = do
+  w <- get
+  forM_ (actors w) $ \actor -> do
+    let r = objectRenderable actor
+    terminalColour (foreground r)
+    printChar (objectPosition actor) (glyph r)
+
 ```

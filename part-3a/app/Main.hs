@@ -112,9 +112,9 @@ runLoop = do
 
 renderMap :: GameMonad m => m ()
 renderMap = do
-  tm <- gets tileMap
-  terminalBkColour (defaultBackgroundColour tm)
-  traverseArrayWithCoord_ (tiles tm) $ \p Tile{..} -> do
+  w <- get
+  terminalBkColour (defaultBackgroundColour (tileMap w))
+  traverseArrayWithCoord_ (tiles (tileMap w)) $ \p Tile{..} -> do
     terminalColour (foreground renderable)
     printChar p (glyph renderable)
 

@@ -8,7 +8,6 @@ module HsRogue.Map
   ) where
 
 import HsRogue.Prelude
-
 import Rogue.Array2D.Boxed ( Array2D )
 import Rogue.Colour ( Colour )
 import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..) )
