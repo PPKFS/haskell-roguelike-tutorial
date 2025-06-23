@@ -1,15 +1,15 @@
 module HsRogue.Object
-  ( objectRenderable
-  , objectPosition
-  , moveObject
-  , HasActorID(..)
-  , getActor
-  , Actor
+  ( Actor
   , ActorData(..)
   , ActorEntity(..)
-  , ObjectData(..)
-  , HasObjectData(..)
   , Direction(..)
+  , HasActorID(..)
+  , HasObjectData(..)
+  , ObjectData(..)
+  , getActor
+  , moveObject
+  , objectPosition
+  , objectRenderable
   ) where
 
 import HsRogue.Prelude
@@ -17,19 +17,18 @@ import HsRogue.Renderable
 import Rogue.Objects.Object as RF ( Object(..) )
 import Rogue.Objects.Entity ( Entity(..), HasID(..) )
 
-import Optics
 import Rogue.FieldOfView.Visibility (Viewshed)
 import Rogue.Monad (MonadStore, getObject)
 
 data ActorData = ActorData
   { objectData :: ObjectData
   , viewshed :: Viewshed
-  } deriving (Show, Eq, Ord, Generic)
+  } deriving (Eq, Ord, Show, Generic)
 
 data ObjectData = ObjectData
   { position :: V2
   , renderable :: Renderable
-  } deriving (Show, Eq, Ord, Generic)
+  } deriving (Eq, Ord, Show, Generic)
 
 class HasObjectData o where
   objectDataL :: Lens' o ObjectData
@@ -52,14 +51,13 @@ instance HasObjectData Actor where
   objectDataL = #objectData % #objectData
 
 newtype ActorEntity = ActorEntity { unActor :: Entity }
-  deriving (Eq, Ord, Show, Enum)
+  deriving  (Eq, Ord, Show, Generic, Enum)
 
 instance HasID ActorEntity where
   getID = unActor
 
-
 data Direction = LeftDir | RightDir | UpDir | DownDir | UpRightDir | DownRightDir | UpLeftDir | DownLeftDir
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
+  deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
 objectRenderable :: HasObjectData o => Lens' o Renderable
 objectRenderable = objectDataL % #renderable

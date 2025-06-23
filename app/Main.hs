@@ -1,7 +1,7 @@
 module Main where
 
 import HsRogue.Prelude
-import Data.List.NonEmpty
+import Data.List.NonEmpty ( NonEmpty(..) )
 
 import BearLibTerminal
     ( terminalClear,
@@ -11,28 +11,26 @@ import BearLibTerminal
 
 import BearLibTerminal.Keycodes
 
-import HsRogue.Map
-import HsRogue.MapGen
-import HsRogue.Object
-import HsRogue.Renderable
-import HsRogue.World
-
-import HsRogue.Viewshed
-
-import Optics ( to, (%), (^.), use )
 import Optics.State.Operators ((.=))
 
 import Rogue.Array2D.Boxed ( (!?@), traverseArrayWithCoord_, replicateArray )
 import Rogue.Colour ( terminalColour, black, desaturate, toGreyscale )
 import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
-import Rogue.Events ( BlockingMode(..), handleEvents )
-import Rogue.Geometry.Rectangle (centre)
+import Rogue.Events ( BlockingMode(..), handleEvents_ )
+import Rogue.Geometry.Rectangle ( centre )
 import Rogue.Monad ( MonadRogue, MonadStore )
 import Rogue.Objects.Entity ( Entity(..) )
 import Rogue.Objects.Store ( emptyStore )
 import Rogue.Rendering.Print ( printChar)
-import Rogue.Tilemap (MonadTiles(..))
+import Rogue.Tilemap ( MonadTiles(..) )
 import Rogue.Window ( withWindow )
+
+import HsRogue.Map
+import HsRogue.MapGen
+import HsRogue.Object
+import HsRogue.Renderable
+import HsRogue.Viewshed
+import HsRogue.World
 
 import qualified Data.Map as M
 
@@ -47,7 +45,7 @@ type GameMonad m = (MonadTiles Tile m, MonadRogue m, MonadIO m, MonadState World
 main :: IO ()
 main = do
   withWindow
-    defaultWindowOptions { size = Just screenSize }
+    defaultWindowOptions { size = Just screenSize, title = Just "HsRogue - Part 3b" }
     initGame
     (evalStateT runLoop)
     (return ())
@@ -92,6 +90,9 @@ asMovement k = k `M.lookup` movementKeys
 pendQuit :: MonadState WorldState m => m ()
 pendQuit = #pendingQuit .= True
 
+getTileAtLocation :: MonadState WorldState m => V2 -> m (Maybe Tile)
+getTileAtLocation loc = use $ #tileMap % #tiles % to (!?@ loc)
+
 runLoop :: GameMonad m => m ()
 runLoop = do
   everyTurn
@@ -99,19 +100,20 @@ runLoop = do
   renderMap
   renderActors
   terminalRefresh
-  _ <- handleEvents Blocking $ \case
+  handleEvents_ Blocking $ \case
     TkClose -> pendQuit
     TkEscape -> pendQuit
     other -> case asMovement other of
       Just dir -> do
         playerObject <- getPlayer
         let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
-        tileAtLocation <- use $ #tileMap % #tiles % Optics.to (!?@ potentialNewLocation)
+        tileAtLocation <- getTileAtLocation potentialNewLocation
         case tileAtLocation of
           Just t
             | walkable t -> moveActorInDirection playerObject dir
           _ -> return ()
       Nothing -> return ()
+  shouldQuit <- gets pendingQuit
   unless shouldQuit runLoop
 
 renderMap :: GameMonad m => m ()

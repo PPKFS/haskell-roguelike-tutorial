@@ -5,17 +5,25 @@ module HsRogue.Prelude
   , module Control.Monad.State.Strict
   , module Rogue.Geometry.V2
   , module GHC.Generics
+  , module Optics
   , Text
+
   , whenJust
   ) where
 
 import Prelude
-import Data.Maybe
+
 import Control.Monad
 import Control.Monad.State.Strict
-import GHC.Generics hiding (to)
-import Rogue.Geometry.V2
+
+import Data.Maybe
 import Data.Text (Text)
+
+import GHC.Generics (Generic)
+
+import Optics
+
+import Rogue.Geometry.V2
 
 whenJust :: Applicative f => Maybe a -> (a -> f b) -> f ()
 whenJust mbA f = case mbA of
