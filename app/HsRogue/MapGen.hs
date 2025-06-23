@@ -13,7 +13,6 @@ module HsRogue.MapGen
 import HsRogue.Prelude
 
 import Data.List.NonEmpty (NonEmpty)
-import HsRogue.Map
 
 import Rogue.Array2D.Boxed ( (//@), replicateArray, Array2D )
 import Rogue.Geometry.Rectangle
@@ -27,6 +26,9 @@ import Rogue.Geometry.Rectangle
     )
 import Rogue.Monad ( MonadRogue )
 import Rogue.Random ( coinFlip, randomPoint, randomV2 )
+
+import HsRogue.Map
+
 import qualified Data.List.NonEmpty as NE
 
 emptyWallMap :: V2 -> Array2D Tile

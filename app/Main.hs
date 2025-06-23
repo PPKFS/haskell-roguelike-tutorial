@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module Main where
 
 import HsRogue.Prelude
@@ -90,8 +89,8 @@ movementKeys = M.fromList
 asMovement :: Keycode -> Maybe Direction
 asMovement k = k `M.lookup` movementKeys
 
-quitAfter :: MonadState WorldState m => m ()
-quitAfter = #pendingQuit .= True
+pendQuit :: MonadState WorldState m => m ()
+pendQuit = #pendingQuit .= True
 
 runLoop :: GameMonad m => m ()
 runLoop = do
@@ -101,8 +100,8 @@ runLoop = do
   renderActors
   terminalRefresh
   _ <- handleEvents Blocking $ \case
-    TkClose -> quitAfter
-    TkEscape -> quitAfter
+    TkClose -> pendQuit
+    TkEscape -> pendQuit
     other -> case asMovement other of
       Just dir -> do
         playerObject <- getPlayer
@@ -113,8 +112,7 @@ runLoop = do
             | walkable t -> moveActorInDirection playerObject dir
           _ -> return ()
       Nothing -> return ()
-  shouldContinue <- not <$> gets pendingQuit
-  when shouldContinue runLoop
+  unless shouldQuit runLoop
 
 renderMap :: GameMonad m => m ()
 renderMap = do
