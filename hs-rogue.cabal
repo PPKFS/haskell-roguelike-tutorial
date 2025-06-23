@@ -36,9 +36,9 @@ executable hs-rogue
   default-language: GHC2021
   ghc-options: -Wall
   other-modules:
+      HsRogue.Map
+      HsRogue.MapGen
+      HsRogue.Object
       HsRogue.Prelude
       HsRogue.Renderable
-      HsRogue.MapGen
-      HsRogue.Map
       HsRogue.World
-      HsRogue.Object
