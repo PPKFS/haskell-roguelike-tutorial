@@ -113,8 +113,8 @@ modifierKeys = S.fromList [TkShift]
 asMovement :: InputEvent -> Maybe Direction
 asMovement k = k `M.lookup` movementKeys
 
-quitAfter :: MonadState WorldState m => m Bool
-quitAfter = do
+pendQuit :: MonadState WorldState m => m Bool
+pendQuit = do
   #pendingQuit .= True
   return False
 
@@ -127,8 +127,8 @@ runLoop shouldUpdate = do
     renderActors
     terminalRefresh
   didAnything <- fmap or $ handleEvents Blocking $ \case
-    TkClose -> quitAfter
-    TkEscape -> quitAfter
+    TkClose -> pendQuit
+    TkEscape -> pendQuit
 
     other -> do
       keystate <- makeEvent modifierKeys other
