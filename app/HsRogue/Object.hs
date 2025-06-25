@@ -19,23 +19,24 @@ module HsRogue.Object
   ) where
 
 import HsRogue.Prelude
-import HsRogue.Renderable
+
 import Rogue.Objects.Object as RF ( Object(..), ObjectKind (..) )
 import Rogue.Objects.Entity ( Entity(..), HasID(..) )
 
-import Optics
 import Rogue.FieldOfView.Visibility (Viewshed)
 import Rogue.Monad (MonadStore, getObject)
+
+import HsRogue.Renderable
 
 data ActorData = ActorData
   { objectData :: ObjectData
   , viewshed :: Viewshed
-  } deriving (Show, Eq, Ord, Generic)
+  } deriving (Eq, Ord, Show, Generic)
 
 data ObjectData = ObjectData
   { position :: V2
   , renderable :: Renderable
-  } deriving (Show, Eq, Ord, Generic)
+  } deriving (Eq, Ord, Show, Generic)
 
 class HasObjectData o where
   objectDataL :: Lens' o ObjectData
@@ -48,13 +49,13 @@ type Actor = RF.Object ActorData ActorSpecifics
 data ActorSpecifics =
   PlayerSpecifics ()
   | MonsterS MonsterSpecifics
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 data MonsterSpecifics = MonsterSpecifics
   { insult :: Text
   , behaviour :: MonsterBehaviour
   , seenPlayer :: Bool
-  } deriving (Show, Eq, Ord, Generic)
+  } deriving (Eq, Ord, Show, Generic)
 
 data MonsterBehaviour = AttackPlayer | FleeFromPlayer
   deriving (Show, Eq, Ord, Generic, Enum, Bounded)
@@ -100,4 +101,3 @@ monsterKind = ObjectKind "monster"
 
 playerKind :: ObjectKind
 playerKind = ObjectKind "player"
-

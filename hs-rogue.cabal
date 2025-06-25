@@ -4,7 +4,7 @@ version:       0.0.5.0
 synopsis:      Roguelike tutorial in Haskell.
 description:   Part 5 of the roguelike tutorial in Haskell.
 homepage:
-  https://github.com/PPKFS/roguelike-tutorial-parts/tree/part-2
+  https://github.com/PPKFS/roguelike-tutorial-parts/tree/part-5
 
 bug-reports:   https://github.com/PPKFS/roguelike-tutorial-parts/issues
 license:       MIT
@@ -18,30 +18,30 @@ tested-with:   GHC ==9.12.2 || ==9.8.2
 executable hs-rogue
   main-is:            Main.hs
   default-extensions:
+    DuplicateRecordFields
     LambdaCase
     NoImplicitPrelude
-    OverloadedStrings
     OverloadedLabels
-    DuplicateRecordFields
+    OverloadedStrings
   build-depends:
-      base >=4.19.1.0
+      , base
       , bearlibterminal
-      , enummapset
-      , roguefunctor
       , containers
-      , random
+      , enummapset
       , mtl
-      , random
       , optics
+      , random
+      , random
+      , roguefunctor
       , text
   hs-source-dirs:   app
   default-language: GHC2021
   ghc-options: -Wall
   other-modules:
+      HsRogue.Map
+      HsRogue.MapGen
+      HsRogue.Object
       HsRogue.Prelude
       HsRogue.Renderable
-      HsRogue.MapGen
-      HsRogue.Map
-      HsRogue.World
-      HsRogue.Object
       HsRogue.Viewshed
+      HsRogue.World
