@@ -1,64 +1,55 @@
-module HsRogue.Viewshed where
+module HsRogue.Viewshed
+  ( getVisibleTiles
+  , makeAllViewshedsDirty
+  , moveActorInDirection
+  , moveActor
+  , updateViewsheds
+  ) where
 
 import HsRogue.Prelude
-import HsRogue.World
-import HsRogue.Object
-import Rogue.FieldOfView.Visibility
-import Rogue.FieldOfView.Raycasting
-import qualified Data.Set as S
+
+import Optics.State.Operators ( (%=), (.=) )
 import Rogue.Array2D.Boxed ((//@))
-import Optics.State.Operators
-import Rogue.Monad
-import Optics
+import Rogue.FieldOfView.Raycasting ( calculateFov )
+import Rogue.FieldOfView.Visibility ( Viewshed(..) )
+import Rogue.Monad ( modifyObject, traverseObjects_, MonadStore )
+
 import HsRogue.Map
+import HsRogue.Object
+import HsRogue.World
+
+import qualified Data.Set as S
 
 makeAllViewshedsDirty :: (MonadStore Actor m, MonadState WorldState m) => m ()
 makeAllViewshedsDirty = traverseObjects_ (use #actors) $ \actor -> makeViewshedDirty (actorID actor) >> return Nothing
 
-makeViewshedDirty :: MonadState WorldState m
-  => ActorEntity
-  -> m ()
+makeViewshedDirty :: MonadState WorldState m => ActorEntity -> m ()
 makeViewshedDirty v = #dirtyViewsheds %= (v:)
 
-updateViewsheds :: MonadIO m
-  => (MonadStore Actor m, MonadState WorldState m)
-  => m ()
+updateViewsheds :: (MonadStore Actor m, MonadState WorldState m) => m ()
 updateViewsheds = do
   vs <- use #dirtyViewsheds
   #dirtyViewsheds .= []
-  forM_ vs updateViewshed
+  mapM_ updateViewshed vs
 
-updateViewshed ::
-  MonadState WorldState m
-  => MonadStore Actor m
-  => ActorEntity
-  -> m ()
+updateViewshed :: (MonadStore Actor m, MonadState WorldState m) => ActorEntity -> m ()
 updateViewshed e = do
   o <- getActor e
   p <- use #player
   tm <- use #tileMap
   let viewshed = o ^. #objectData % #viewshed
-  let fov = calculateFov tm (o ^. objectPosition) (range viewshed + 1)
+  let fov = calculateFov tm (o ^. objectPosition) (range viewshed)
   updateActor o (#objectData % #viewshed % #visibleTiles .~ fov)
-  when (p == e) $
+  when (p == e) $ do
     let newlyRevealedTiles = map (,True) (S.toList fov)
-    in #tileMap % #revealedTiles %= (//@ newlyRevealedTiles)
+    #tileMap % #revealedTiles %= (//@ newlyRevealedTiles)
 
-getVisibleTiles ::
-  MonadStore Actor m
-  => MonadState WorldState m
-  => m (S.Set V2)
+getVisibleTiles :: (MonadStore Actor m, MonadState WorldState m) => m (S.Set V2)
 getVisibleTiles = do
   pl <- getPlayer
   return (pl ^. #objectData % #viewshed % #visibleTiles)
 
-moveActor ::
-  MonadState WorldState m
-  => MonadStore Actor m
-  => HasActorID a
-  => a
-  -> V2
-  -> m ()
+moveActor :: (MonadStore Actor m, MonadState WorldState m, HasActorID a) => a -> V2 -> m ()
 moveActor e newPos = do
   o <- getActor (actorID e)
   modifyObject o (objectPosition .~ newPos)
@@ -66,13 +57,7 @@ moveActor e newPos = do
   #tileMap %= placeActorOnTile newPos o
   makeViewshedDirty (actorID e)
 
-moveActorInDirection ::
-  MonadState WorldState m
-  => MonadStore Actor m
-  => HasActorID a
-  => a
-  -> Direction
-  -> m ()
+moveActorInDirection :: (MonadStore Actor m, MonadState WorldState m, HasActorID a) => a -> Direction -> m ()
 moveActorInDirection e dir = do
   o <- getActor (actorID e)
   let newPos = calculateNewLocation dir $ o ^. objectPosition
