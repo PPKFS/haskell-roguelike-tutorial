@@ -1,45 +1,40 @@
-{-# LANGUAGE RecordWildCards #-}
 module Main where
 
 import HsRogue.Prelude
-import Data.List.NonEmpty
+import Data.List.NonEmpty ( NonEmpty(..) )
 
 import BearLibTerminal
     ( terminalClear,
       terminalRefresh,
-      terminalSet_, terminalState
+      terminalSet_
     )
-
 import BearLibTerminal.Keycodes
+
+import Optics.State.Operators ((.=))
+
+import Rogue.AStar (findPath)
+import Rogue.Array2D.Boxed ( traverseArrayWithCoord_, replicateArray )
+import Rogue.Colour ( terminalColour, black, desaturate, toGreyscale )
+import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
+import Rogue.Events ( BlockingMode(..), InputEvent (..), makeEvent, handleEvents )
+import Rogue.FieldOfView.Visibility ( Viewshed(..) )
+import Rogue.Geometry.Rectangle ( centre )
+import Rogue.Monad ( MonadRogue, MonadStore, modifyObject )
+import Rogue.Objects.Entity ( Entity(..) )
+import Rogue.Objects.Store ( emptyStore )
+import Rogue.Random (randomEnum, choose)
+import Rogue.Rendering.Print ( printChar, printText_)
+import Rogue.Tilemap ( MonadTiles(..), positionAllowsMovement )
+import Rogue.Window ( withWindow )
 
 import HsRogue.Map
 import HsRogue.MapGen
 import HsRogue.Object
 import HsRogue.Renderable
+import HsRogue.Viewshed
 import HsRogue.World
 
-import HsRogue.Viewshed
-
-import Optics
-import Optics.State.Operators ((.=))
-
-import Rogue.Array2D.Boxed ( traverseArrayWithCoord_, replicateArray )
-import Rogue.Colour ( terminalColour, black, desaturate, toGreyscale )
-import Rogue.Config ( WindowOptions(..), defaultWindowOptions )
-import Rogue.Events ( BlockingMode(..), handleEvents )
-import Rogue.Geometry.Rectangle (centre)
-import Rogue.Monad ( MonadRogue, MonadStore, modifyObject )
-import Rogue.Objects.Entity ( Entity(..) )
-import Rogue.Objects.Store ( emptyStore )
-import Rogue.Rendering.Print ( printChar)
-import Rogue.Tilemap
-import Rogue.Window ( withWindow )
 import qualified Data.Map as M
-import Rogue.FieldOfView.Visibility
-import Rogue.AStar (findPath)
-import Rogue.Random
-import qualified Data.Text as T
-import Rogue.Events
 import qualified Data.Set as S
 
 screenSize :: V2
@@ -53,7 +48,7 @@ type GameMonad m = (MonadTiles Tile m, MonadRogue m, MonadIO m, MonadState World
 main :: IO ()
 main = do
   withWindow
-    defaultWindowOptions { size = Just screenSize }
+    defaultWindowOptions { size = Just screenSize, title = Just "Haskell Roguelike Tutorial - Part 5" }
     initGame
     (evalStateT (runLoop True))
     (return ())
@@ -61,7 +56,7 @@ main = do
 initGame :: (MonadIO m, MonadRogue m) => m WorldState
 initGame = do
   terminalSet_ "font: KreativeSquare.ttf, size=16x16"
-  (madeMap, firstRoom:|otherRooms) <- roomsAndCorridorsMap 30 4 12 screenSize
+  (madeMap, firstRoom:|otherRooms) <- roomsAndCorridorsMap 30 4 12 (screenSize - V2 0 2)
   let initialWorld = (WorldState
         { tileMap = Tiles
           { tiles = madeMap
@@ -121,8 +116,8 @@ pendQuit = do
 runLoop :: GameMonad m => Bool -> m ()
 runLoop shouldUpdate = do
   when shouldUpdate $ do
-    everyTurn
     terminalClear
+    everyTurn
     renderMap
     renderActors
     terminalRefresh
@@ -189,11 +184,12 @@ monstersThink = do
             when (positionAllowsMovement m nextStep) $
               moveActor actor nextStep
           Just (thePlayerIsAdjacent:_) -> do
+            return ()
 
           _ -> return ()
 
 insultPlayer :: MonadIO m => Text -> Text -> m ()
-insultPlayer name insult = liftIO $ putStrLn $ T.unpack $ name <> " yells " <> insult  <> "!"
+insultPlayer name insult = liftIO $ printText_ (V2 0 48) $ name <> " yells " <> insult  <> "!"
 
 everyTurn :: GameMonad m => m ()
 everyTurn = do

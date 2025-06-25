@@ -27,13 +27,12 @@ import HsRogue.Renderable
 import Rogue.Objects.Object as RF ( Object(..), ObjectKind (..) )
 import Rogue.Objects.Entity ( Entity(..), HasID(..) )
 
-import Optics
 import Rogue.FieldOfView.Visibility (Viewshed)
 import Rogue.Monad (MonadStore, getObject)
 
 data ActorData = ActorData
   { objectData :: ObjectData
-  , combat :: Combat
+  , combat :: CombatStats
   , viewshed :: Viewshed
   } deriving (Show, Eq, Ord, Generic)
 
