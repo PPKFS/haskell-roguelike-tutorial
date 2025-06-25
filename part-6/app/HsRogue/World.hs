@@ -9,19 +9,19 @@ module HsRogue.World
 
 import HsRogue.Prelude
 
-import HsRogue.Map hiding (renderable)
-
-import HsRogue.Renderable ( Renderable )
+import Rogue.Array2D.Boxed ((//@))
+import Rogue.FieldOfView.Visibility ( emptyViewshed )
 import Rogue.Monad ( MonadRogue, makeObject, MonadStore(..) )
 import Rogue.Objects.Entity ( HasID(..) )
 import Rogue.Objects.Object ( Object(..), ObjectKind(..) )
 import Rogue.Objects.Store ( Store )
-import Optics
-import Optics.State.Operators ( (%=), (?=), (.=) )
-import Rogue.FieldOfView.Visibility ( emptyViewshed )
 import Rogue.Tilemap (MonadTiles(..), Tilemap(..))
-import Rogue.Array2D.Boxed ((//@))
+
+import Optics.State.Operators ( (%=), (?=), (.=) )
+
+import HsRogue.Map hiding (renderable)
 import HsRogue.Object
+import HsRogue.Renderable
 
 data WorldState = WorldState
   { player :: ActorEntity
@@ -49,6 +49,7 @@ addActor kind name r pos viewLim spec = do
           { position = pos
           , renderable = r
           }
+        , combat = playerCombatStats
         , viewshed = emptyViewshed viewLim
         }
   o <- makeObject kind name actorData spec

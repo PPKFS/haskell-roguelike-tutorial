@@ -2,25 +2,22 @@ module HsRogue.Map
   ( TileType(..)
   , Tile(..)
   , Tiles(..)
-  , wallTile
-  , floorTile
   , clearTile
+  , floorTile
   , placeActorOnTile
+  , wallTile
   ) where
 
 import HsRogue.Prelude
-import HsRogue.Renderable
 
 import Rogue.Array2D.Boxed ( Array2D, (!?@) )
 import Rogue.Colour ( Colour )
-import Rogue.Tilemap
-import HsRogue.Object
-import qualified Data.Set as S
-import Optics
-import qualified Data.Map as M
-import Rogue.Objects.Entity (HasID(..))
-import Debug.Trace (traceShow)
+import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..), WalkabilityMap(..) )
 
+import HsRogue.Object
+import HsRogue.Renderable
+
+import qualified Data.Map as M
 -- | We want to keep some sort of fixed set of tiles with their relevant properties.
 data TileType = Floor | Wall
   deriving (Eq, Ord, Show, Generic)
@@ -30,7 +27,7 @@ data Tile = Tile
   { name :: Text
   , renderable :: Renderable
   , walkable :: Bool
-  } deriving (Generic, Show)
+  } deriving (Eq, Ord, Show, Generic)
 
 floorTile :: Tile
 floorTile = Tile "floor" floorRenderable True
@@ -43,7 +40,7 @@ data Tiles = Tiles
   , revealedTiles :: Array2D Bool
   , tileContents :: M.Map V2 ActorEntity --(S.Set AnyEntity)
   , defaultBackgroundColour :: Colour
-  } deriving (Generic, Show)
+  } deriving (Eq, Ord, Show, Generic)
 
 instance TileVisibility Tile where
   visibility = walkable
