@@ -22,7 +22,7 @@ import Rogue.Geometry.Rectangle ( centre )
 import Rogue.Monad ( MonadRogue, MonadStore, modifyObject )
 import Rogue.Objects.Entity ( Entity(..) )
 import Rogue.Objects.Store ( emptyStore )
-import Rogue.Random (randomEnum, choose)
+import Rogue.Random ( choose )
 import Rogue.Rendering.Print ( printChar, printText_)
 import Rogue.Tilemap ( MonadTiles(..), positionAllowsMovement )
 import Rogue.Window ( withWindow )
@@ -48,7 +48,7 @@ type GameMonad m = (MonadTiles Tile m, MonadRogue m, MonadIO m, MonadState World
 main :: IO ()
 main = do
   withWindow
-    defaultWindowOptions { size = Just screenSize, title = Just "Haskell Roguelike Tutorial - Part 5" }
+    defaultWindowOptions { size = Just screenSize, title = Just "Haskell Roguelike Tutorial - Part 6" }
     initGame
     (evalStateT (runLoop True))
     (return ())
@@ -70,7 +70,7 @@ initGame = do
         , dirtyViewsheds = []
         })
       addObjectsToWorld = do
-        p <- addActor playerKind "player" playerRenderable (centre firstRoom) 20 (PlayerSpecifics ())
+        p <- addActor playerKind "the player" playerRenderable (centre firstRoom) 20 (PlayerSpecifics ())
         #player .= p
         enumerateFromM_ 1 otherRooms $ \i room -> do
           let centreOfRoom = centre room
@@ -132,6 +132,7 @@ runLoop shouldUpdate = do
           playerObject <- getPlayer
           tm <- use #tileMap
           let potentialNewLocation = calculateNewLocation dir (playerObject ^. objectPosition)
+              contentsOfOtherTile = tileContents
               canWalkOnTile = positionAllowsMovement tm potentialNewLocation
           when canWalkOnTile $ moveActorInDirection playerObject dir
           return canWalkOnTile
@@ -167,7 +168,8 @@ renderActors = do
 monstersThink :: GameMonad m => m ()
 monstersThink = do
   actors <- use #actors
-  playerLocation <- view objectPosition <$> getPlayer
+  p <- getPlayer
+  let playerLocation = p ^. objectPosition
   forM_ actors $ \actor ->
     whenJust (actor ^? #specifics % #_MonsterS) $ \monsterStuff -> do
       let canSeePlayer = playerLocation `elem` actor ^. #objectData % #viewshed % #visibleTiles
@@ -178,18 +180,43 @@ monstersThink = do
         modifyObject actor (#specifics % #_MonsterS % #seenPlayer .~ False)
       when canSeePlayer $ do
         m <- use #tileMap
-        r <- findPath m (actor ^. objectPosition) playerLocation
+        let r = findPath m (actor ^. objectPosition) playerLocation
         case r of
           Just (nextStep:_:_) -> do
             when (positionAllowsMovement m nextStep) $
               moveActor actor nextStep
-          Just (thePlayerIsAdjacent:_) -> do
+          Just (_thePlayerIsAdjacent:_) -> do
+            actor `attacks` p
             return ()
 
           _ -> return ()
 
+printToMessageBox :: MonadIO m => Text -> m ()
+printToMessageBox = liftIO . printText_ (V2 0 48)
+
+attacks :: (MonadIO m, MonadStore Actor m, HasActorID a1, HasActorID a2) => a1 -> a2 -> m ()
+attacks attackerE defenderE = do
+  attacker <- getActor attackerE
+  defender <- getActor defenderE
+  let damage = attacker ^. actorCombat % #attack - defender ^. actorCombat % #defense
+  let message = (attacker ^. #name) <> " attacks " <> (defender ^. #name)
+  if damage <= 0
+  then
+    printToMessageBox (message <> ", but it bounces off their armour harmlessly!")
+  else do
+    let newHp = defender ^. actorCombat % #currentHp - damage
+    modifyObject defender (actorCombat % #currentHp .~ newHp)
+    let updatedMessage = mconcat
+          [ message
+          , ", dealing "
+          , showText damage
+          , " damage"
+          , if newHp <= 0 then ", and it dies!" else "!"
+          ]
+    printToMessageBox updatedMessage
+
 insultPlayer :: MonadIO m => Text -> Text -> m ()
-insultPlayer name insult = liftIO $ printText_ (V2 0 48) $ name <> " yells " <> insult  <> "!"
+insultPlayer name insult = printToMessageBox $ name <> " yells " <> insult  <> "!"
 
 everyTurn :: GameMonad m => m ()
 everyTurn = do

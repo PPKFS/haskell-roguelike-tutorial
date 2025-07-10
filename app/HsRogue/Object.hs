@@ -18,6 +18,7 @@ module HsRogue.Object
   , monsterKind
 
   , CombatStats(..)
+  , actorCombat
   , playerCombatStats
   , goblinCombatStats
   ) where
@@ -96,11 +97,14 @@ objectRenderable = objectDataL % #renderable
 objectPosition :: HasObjectData o => Lens' o V2
 objectPosition = objectDataL % #position
 
+actorCombat :: Lens' Actor CombatStats
+actorCombat = #objectData % #combat
+
 moveObject :: HasObjectData o => V2 -> o -> o
 moveObject pos = objectPosition .~ pos
 
-getActor :: MonadStore Actor m => ActorEntity -> m Actor
-getActor = getObject
+getActor :: (HasActorID a, MonadStore Actor m) => a -> m Actor
+getActor = getObject . actorID
 
 actorKind :: ObjectKind
 actorKind = ObjectKind "actor"
