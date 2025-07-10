@@ -19,16 +19,16 @@ data TileType = Floor | Wall
   deriving (Eq, Ord, Show, Generic)
 
 data Tile = Tile
-  { name :: Text
+  { tileType :: TileType
   , renderable :: Renderable
   , walkable :: Bool
   } deriving (Eq, Ord, Show, Generic)
 
 floorTile :: Tile
-floorTile = Tile "floor" floorRenderable True
+floorTile = Tile Floor floorRenderable True
 
 wallTile :: Tile
-wallTile = Tile "wall" wallRenderable False
+wallTile = Tile Wall wallRenderable False
 
 data Tiles = Tiles
   { tiles :: Array2D Tile

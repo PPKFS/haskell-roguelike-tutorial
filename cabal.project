@@ -8,3 +8,8 @@ packages:
   part-5/hs-rogue.cabal
   part-6/hs-rogue.cabal
   roguefunctor/roguefunctor.cabal
+
+source-repository-package
+  type: git
+  location: https://github.com/bch29/voronoi.git
+  tag: 51c4185c1b2f2406ffb63db8748c548dd6e147b7
