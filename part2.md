@@ -1,52 +1,118 @@
 ---
 author: ["Avery"]
 title: "Haskell Roguelike Tutorial Part 2 - Making a Map"
-date: "2025-04-18"
-modified: "2025-06-19"
-description: "This is the first 'proper' tutorial post; there's a walkthrough of the window opening example before jumping in with moving an @ around the screen."
-summary: "Walking through the window opening code and drawing and moving a character."
+date: "2025-07-09"
+modified: "2025-07-09"
+description: "Back for Part 2, this part introduces a proper map structure that we can move around in. Then we make a couple of very simple maps; one with random walls and one with rooms and corridors."
+summary: "Part 2: Making some maps with rooms and corridors."
 tags: ["roguelike", "tutorial", "projects", "haskell"]
 categories: ["haskell"]
 series: ["roguelike-tutorial"]
 ShowToc: true
 TocOpen: true
-draft: false
+draft: true
 weight: 1
 social:
   bluesky: "ppkfs@bsky.social"
 ---
 
-```haskell
-module HsRogue.Map
-  ( TileType(..)
-  , Tile(..)
-  , Tiles(..)
-  , wallTile
-  , floorTile
+Welcome back to part 2 of the Haskell roguelike tutorial! In the [previous part](https://ppkfs.github.io/posts/roguelike-tutorial/part1/) we added a player that we could move around with the arrow keys and WASD.
+This isn't particularly fun or exciting, so in this part we're going to add a basic map to move around in. This also marks the start of 3 parts (well, 2 parts - but one is split in two) of designing our game's architecture. In this part we're going to add a tile map, and in the next part we're going to add objects (rather than treating the player as just a graphic with a position) and also introduce `optics` to finally deal with the headache of nested record updates.
 
-  ) where
+# Optional: Upgrading our font
+
+`BearLibTerminal` ships with a default font built-in (literally; it's hard-coded in as a raw string of bytes) which is *fine* but it's a little ugly. It also has the minor annoyance that, like most fonts, it's not square. This is fine for writing, but less good for a tile-based game. It's very noticeable if you make diagonal lines, where you seem to be going vertically twice as far as horizontally. One font I particularly like is [**Kreative Square**](https://www.kreativekorp.com/software/fonts/ksquare/). It's a monospace square font that looks pretty good, has a bunch of special characters that are handy for roguelikes (box drawing, shapes, and the like) and -- most importantly for this tutorial -- has a very permissive license. The font is completely free to download [here](https://github.com/kreativekorp/open-relay). The libraries support any bitmap (.bmp) or TrueType (.ttf) font. For full details of configuration options, check the [BearLibTerminal configuration documentation](http://foo.wyrd.name/en:bearlibterminal:reference:configuration).
+
+All we need to do to use this new font is to place the `KreativeSquare.ttf` file in the root folder of our project and then tell the library the font we wish to use as the default:
+
+
+```haskell
+main :: IO ()
+main = do
+  withWindow
+    defaultWindowOptions { size = Just screenSize }
+    initGame
+    (const $ evalStateT runLoop (WorldState initialPlayerPosition False))
+    (return ())
+
+initGame :: MonadRogue m => m ()
+initGame = do
+  terminalSet_ "font: KreativeSquare.ttf, size=16x16"
+```
+
+The only required parameter for `.ttf` fonts is the size to be rendered at (in pixels). As we don't need to set any alignment -- it will all be calculated automatically -- it's just plug and play. If you're not a fan of how stringly-configured `BearLibTerminal` is, there exist nice typed versions too:
+
+```haskell
+initGame :: MonadRogue m => m ()
+initGame = do
+  terminalSetOptions_ $ defaultTrueTypeFontOptions { font = "KreativeSquare.ttf", size = V2 16 16 }
+```
+
+which will function identically. If you run it now, you should immediately see the window has grown somewhat (because we're now using a bigger font) and also it looks slightly less dated. If you're wondering about having graphical tiles, worry not! They are, actually, very easy to do without having to remember whether "g" maps to a corner wall or an edge wall. Just for a later part. :)
+
+# Making an (empty) map type
+
+## The Renderable type
+
+So let's think about what we need from our map type. A map should be some sort of 2D array of Tiles, where each Tile has some properties -- for example, the colour and character to use to render it, and what type of tile it is (right now, that'll be a floor or a wall). Ah, but we also need at least some of this for rendering other things -- such as the player. Let's make a type to represent anything renderable; nothing complicated, just a character and a colour. In `HsRogue.Renderable`:
+
+```haskell
+module HsRogue.Renderable where
+
+import HsRogue.Prelude
+import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour )
+
+-- Somethign that represents a renderable character. Just one.
+data Renderable = Renderable
+  { glyph :: Char
+  , foreground :: Colour
+  } deriving (Eq, Ord, Show, Generic)
+```
+
+Fairly straightforward. We can also now define the three renderables we want to use currently (the player, a wall, and the floor). The colours I've picked are purely arbitrary - in `Rogue.Colour` you'll find functions for making and modifying colours based on RGB values as well as the 140 named colours from the HTML specification to save you writing in hexcodes - for an overview, you can see them all here - https://www.w3schools.com/tags/ref_colornames.asp. Colours are simply represented as 32-bit integers under the hood, so you can define your own colours with hex notation directly -- such as `Colour 0xFFFF69B4` for hot pink.
+
+
+```haskell
+
+playerRenderable :: Renderable
+playerRenderable = Renderable '@' ivory
+
+floorRenderable :: Renderable
+floorRenderable = Renderable '.' lightSlateGray
+
+wallRenderable :: Renderable
+wallRenderable = Renderable '#' mediumSeaGreen
+```
+
+I've gone for a simple off-white for the player, a light grey for the floor, and a green for the walls.
+
+## The Tile type
+
+Let's make another new module and call it `HsRogue.Map`. We'll start with a couple of types for each individual tile. We don't actually *need* the `TileType`, because we store the properties of the tile independently. However, it does make things easier to debug when you need to `print` a tile to see why something isn't working! The alternative - where a tile is actually just a `TileType` and `walkable` and `renderable` become functions that look like `TileType -> Bool` and `TileType -> Renderable` respectively - would work too, but it would mean we cannot ever have a 'different' floor tile. The intent here is to have `TileType` be a generic classification into floors or walls or pits or grass or whatever, but to determine if something is walkable is done per-tile.
+
+
+```haskell
+module HsRogue.Map where
 
 import HsRogue.Prelude
 import Rogue.Array2D.Boxed ( Array2D )
 import Rogue.Colour ( Colour )
 import HsRogue.Renderable
 
--- | We want to keep some sort of fixed set of tiles with their relevant properties.
 data TileType = Floor | Wall
   deriving (Eq, Ord, Show, Generic)
 
--- because of immutability we don't need to worry about these being heavyweight or whatever.
 data Tile = Tile
-  { name :: Text
+  { tileType :: TileType
   , renderable :: Renderable
   , walkable :: Bool
   } deriving (Generic, Show)
 
 floorTile :: Tile
-floorTile = Tile "floor" floorRenderable True
+floorTile = Tile Floor floorRenderable True
 
 wallTile :: Tile
-wallTile = Tile "wall" wallRenderable False
+wallTile = Tile Wall wallRenderable False
 
 data Tiles = Tiles
   { tiles :: Array2D Tile
@@ -178,33 +244,6 @@ testMap =
   . digRoom (rectangleFromDimensions (V2 35 15) (V2 10 15))
   . digRoom (rectangleFromDimensions (V2 20 15) (V2 10 15))
   . emptyWallMap
-```
-
-```haskell
-module HsRogue.Renderable
-  ( Renderable(..)
-  , playerRenderable
-  , floorRenderable
-  , wallRenderable
-  ) where
-
-import HsRogue.Prelude
-import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour )
-
--- Somethign that represents a renderable character. Just one.
-data Renderable = Renderable
-  { glyph :: Char
-  , foreground :: Colour
-  } deriving (Show, Read, Generic)
-
-playerRenderable :: Renderable
-playerRenderable = Renderable '@' ivory
-
-floorRenderable :: Renderable
-floorRenderable = Renderable '.' lightSlateGray
-
-wallRenderable :: Renderable
-wallRenderable = Renderable '#' mediumSeaGreen
 ```
 
 ```haskell
