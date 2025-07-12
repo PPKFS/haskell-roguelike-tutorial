@@ -62,7 +62,6 @@ module HsRogue.Renderable where
 import HsRogue.Prelude
 import Rogue.Colour ( ivory, lightSlateGray, mediumSeaGreen, Colour )
 
--- Somethign that represents a renderable character. Just one.
 data Renderable = Renderable
   { glyph :: Char
   , foreground :: Colour
@@ -95,8 +94,6 @@ Let's make another new module and call it `HsRogue.Map`. We'll start with a coup
 module HsRogue.Map where
 
 import HsRogue.Prelude
-import Rogue.Array2D.Boxed ( Array2D )
-import Rogue.Colour ( Colour )
 import HsRogue.Renderable
 
 data TileType = Floor | Wall
@@ -113,12 +110,27 @@ floorTile = Tile Floor floorRenderable True
 
 wallTile :: Tile
 wallTile = Tile Wall wallRenderable False
+```
+
+We can do a similar thing to `Renderable` here, where we can define the single copy of a generic wall tile and a floor tile. Thanks, immutability!
+
+## At last, a tilemap
+
+Then for making the actual map, we can use the `Rogue.Array2D.Boxed` type. It's a convenient wrapper around `vector` (which are contiguous-in-memory arrays with O(1) lookup time) that allows us to pretend it's a 2D array that we can index with a 2D coordinate (`V2`). There are a few different 2D array implementations in the library - `Boxed` is the one you'll probably want, as it allows for making arrays of any sort of Haskell type. There's also `Array2D.Unboxed`, roughly for types that are 'primitive' (such as integers) which has better performance, and a version that uses *mutable* vectors.
+
+A warning: the one downside of `vector` in Haskell is that making a change means the **entire vector has to be copied**. That makes updating a vector (or an `Array2D`) potentially quite slow. For the most part as long as you're not doing it hundreds of times a second, you should have no problem! One way we will try to avoid this, especially for building the map, is to combine all of our update operations into one. There's even an operator - `@//` - for doing bulk updates. Just keep it in mind!
+
+```haskell
+import Rogue.Array2D.Boxed ( Array2D )
+import Rogue.Colour ( Colour )
 
 data Tiles = Tiles
   { tiles :: Array2D Tile
   , defaultBackgroundColour :: Colour
   } deriving (Generic, Show)
 ```
+
+We also add a field for the background colour simply to avoid hard-coding things elsewhere.
 
 ```haskell
 module HsRogue.MapGen
