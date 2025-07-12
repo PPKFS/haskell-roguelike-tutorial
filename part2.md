@@ -118,7 +118,7 @@ We can do a similar thing to `Renderable` here, where we can define the single c
 
 Then for making the actual map, we can use the `Rogue.Array2D.Boxed` type. It's a convenient wrapper around `vector` (which are contiguous-in-memory arrays with O(1) lookup time) that allows us to pretend it's a 2D array that we can index with a 2D coordinate (`V2`). There are a few different 2D array implementations in the library - `Boxed` is the one you'll probably want, as it allows for making arrays of any sort of Haskell type. There's also `Array2D.Unboxed`, roughly for types that are 'primitive' (such as integers) which has better performance, and a version that uses *mutable* vectors.
 
-A warning: the one downside of `vector` in Haskell is that making a change means the **entire vector has to be copied**. That makes updating a vector (or an `Array2D`) potentially quite slow. For the most part as long as you're not doing it hundreds of times a second, you should have no problem! One way we will try to avoid this, especially for building the map, is to combine all of our update operations into one. There's even an operator - `@//` - for doing bulk updates. Just keep it in mind!
+A warning: the one downside of `vector` in Haskell is that making a change means the **entire vector has to be copied**. That makes updating a vector (or an `Array2D`) potentially quite slow. For the most part as long as you're not doing it hundreds of times a second, you should have no problem! One way we will try to avoid this, especially for building the map, is to combine all of our update operations into one. There's even an operator - `@// :: Array2D a -> [(V2, a)] -> Array2D a` - for doing bulk updates.
 
 ```haskell
 import Rogue.Array2D.Boxed ( Array2D )
@@ -130,7 +130,54 @@ data Tiles = Tiles
   } deriving (Generic, Show)
 ```
 
-We also add a field for the background colour simply to avoid hard-coding things elsewhere.
+We also add a field for the background colour just to avoid any rendering bugs further down the line. We could hardcode a `terminalBkColour black` but this avoids us forgetting. Let's add an empty map to our `WorldState` and render it. In `Main.hs`:
+
+```haskell
+data WorldState = WorldState
+  { playerPosition :: V2
+  , tileMap :: Tiles -- we added this
+  , pendingQuit :: Bool
+  }
+
+main :: IO ()
+main = do
+  withWindow
+    defaultWindowOptions { size = Just screenSize }
+    initGame
+    (evalStateT runLoop)
+    (return ())
+
+initGame :: MonadRogue m => m WorldState
+initGame = do
+  return $
+    WorldState
+      { playerPosition = initialPlayerPosition
+      , tileMap = Tiles madeMap black -- and this
+      , pendingQuit = False
+      }
+```
+
+If you updated your font, the `initGame` function won't be new. If you didn't, then we're simply moving the world creation logic into its own function. It may seem redundant that it is a *monadic* function when we just return pure data - and that's correct, but very shortly (when we want to use some randomness to make our map) we'll need to be in `MonadIO` anyway. The last part is to render the tile map. We need to iterate over every tile in the array (along with its coordinates), set the currently active foreground and background colours, before drawing the relevant tile at its coordinates. As we only have one background colour for the entire map (for now), we can set this just once at the start of the rendering call. We can use `traverseArrayWithCoord` to iterate an array and perform some operation:
+
+```haskell
+
+traverseArrayWithCoord ::
+  Monad m -- we're wanting to map over the array with some sort of side effects, so it is collected in a monad context
+  => Array2D a  -- given an array of 'a's..
+  -> (V2 -> a -> m b) -- and a function that does some computation on the coordinate of that
+  -> m (V.Vector b)
+```
+
+
+```haskell
+renderMap :: GameMonad m => m ()
+renderMap = do
+  w <- get
+  terminalBkColour (defaultBackgroundColour (tileMap w))
+  traverseArrayWithCoord_ (tiles (tileMap w)) $ \p Tile{..} -> do
+    terminalColour (foreground renderable)
+    printChar p (glyph renderable)
+```
 
 ```haskell
 module HsRogue.MapGen
@@ -268,22 +315,3 @@ data WorldState = WorldState
   }
 ```
 
-```haskell
-main :: IO ()
-main = do
-  withWindow
-    defaultWindowOptions { size = Just screenSize }
-    initGame
-    (evalStateT runLoop)
-    (return ())
-
-initGame :: MonadRogue m => m WorldState
-initGame = do
-  (madeMap, firstRoom:|_) <- roomsAndCorridorsMap 30 4 12 screenSize
-  return $
-    WorldState
-      { playerPosition = centre firstRoom
-      , tileMap = Tiles madeMap black
-      , pendingQuit = False
-      }
-```
