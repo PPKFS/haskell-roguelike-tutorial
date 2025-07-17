@@ -19,6 +19,8 @@ social:
 Welcome back to part 2 of the Haskell roguelike tutorial! In the [previous part](https://ppkfs.github.io/posts/roguelike-tutorial/part1/) we added a player that we could move around with the arrow keys and WASD.
 This isn't particularly fun or exciting, so in this part we're going to add a basic map to move around in. This also marks the start of 3 parts (well, 2 parts - but one is split in two) of designing our game's architecture. In this part we're going to add a tile map, and in the next part we're going to add objects (rather than treating the player as just a graphic with a position) and also introduce `optics` to finally deal with the headache of nested record updates.
 
+As we're going to be introducing a bunch more modules and importing a bunch from `roguefunctor`, I will be condensing some of the code snippets compared to the [example repository](https://github.com/ppkfs/haskell-roguelike-tutorial) - I'll cut out explicit import and export lists. It's good practice to make these explicit - and the full code provided will have them to make it clear what is imported from where - but it gets a bit messy to keep updating the imports in each snippet here.
+
 # Optional: Upgrading our font
 
 `BearLibTerminal` ships with a default font built-in (literally; it's hard-coded in as a raw string of bytes) which is *fine* but it's a little ugly. It also has the minor annoyance that, like most fonts, it's not square. This is fine for writing, but less good for a tile-based game. It's very noticeable if you make diagonal lines, where you seem to be going vertically twice as far as horizontally. One font I particularly like is [**Kreative Square**](https://www.kreativekorp.com/software/fonts/ksquare/). It's a monospace square font that looks pretty good, has a bunch of special characters that are handy for roguelikes (box drawing, shapes, and the like) and -- most importantly for this tutorial -- has a very permissive license. The font is completely free to download [here](https://github.com/kreativekorp/open-relay). The libraries support any bitmap (.bmp) or TrueType (.ttf) font. For full details of configuration options, check the [BearLibTerminal configuration documentation](http://foo.wyrd.name/en:bearlibterminal:reference:configuration).
@@ -147,15 +149,17 @@ main = do
     (evalStateT runLoop)
     (return ())
 
-initGame :: MonadRogue m => m WorldState
+initGame :: m WorldState
 initGame = do
   return $
     WorldState
       { playerPosition = initialPlayerPosition
-      , tileMap = Tiles madeMap black -- and this
+      , tileMap = replicateArray floorTile screenSize
       , pendingQuit = False
       }
 ```
+
+`replicateArray` makes a new array filled with copies of the given element (in this case, floor tiles) with a given size.
 
 If you updated your font, the `initGame` function won't be new. If you didn't, then we're simply moving the world creation logic into its own function. It may seem redundant that it is a *monadic* function when we just return pure data - and that's correct, but very shortly (when we want to use some randomness to make our map) we'll need to be in `MonadIO` anyway. The last part is to render the tile map. We need to iterate over every tile in the array (along with its coordinates), set the currently active foreground and background colours, before drawing the relevant tile at its coordinates. As we only have one background colour for the entire map (for now), we can set this just once at the start of the rendering call. We can use `traverseArrayWithCoord` to iterate an array and perform some operation:
 
@@ -163,13 +167,20 @@ If you updated your font, the `initGame` function won't be new. If you didn't, t
 
 traverseArrayWithCoord ::
   Monad m -- we're wanting to map over the array with some sort of side effects, so it is collected in a monad context
-  => Array2D a  -- given an array of 'a's..
-  -> (V2 -> a -> m b) -- and a function that does some computation on the coordinate of that
-  -> m (V.Vector b)
+  => Array2D a  -- given an array of `a`s..
+  -> (V2 -> a -> m b) -- and a function that produces a `b` (with some monadic effects, potentially)
+  -> m (V.Vector b) -- sequence all those effects and return a new vector with the new elements.
 ```
 
+If you don't need to calculate the returned vector (e.g. you just want to do some effect like printing, meaning your function looks like `V2 -> a -> m ()` and you'd be producing a `V.Vector ()`) you can ignore it with `traverseArrayWithCoord_` like we do here. Similarly, if you don't need the coordinate of the element you can use `traverseArray/traverseArray_`.
 
 ```haskell
+runLoop :: GameMonad m => m ()
+runLoop = do
+  terminalClear
+  renderMap
+  ...
+
 renderMap :: GameMonad m => m ()
 renderMap = do
   w <- get
@@ -178,6 +189,73 @@ renderMap = do
     terminalColour (foreground renderable)
     printChar p (glyph renderable)
 ```
+
+Here I'm using `RecordWildCards` to shortcut manually expanding the `Tile` constructor. You can either add it to your `default-extensions` in your `*.cabal` file, or add `{-# LANGUAGE RecordWildCards #-}` at the top of the module. We set the active background colour once, and then for each individual tile we set the active foreground colour before printing it at its coordinate. We then add the rendering to the main loop.
+
+If you compile and run it now, you'll notice the entire world is now floor and you can walk around on it! However, it's quite boring and you can still proceed to walk off the side of the screen. Let's make it more exciting.
+
+# Making an interesting map
+
+We'll make a new module for our various map generators. In a much later part, we'll want to revisit these to make them truly modular and combinable. We'll put all of our map generator utilities in `HsRogue.MapGen`.
+
+```haskell
+
+module HsRogue.MapGen where
+
+import HsRogue.Prelude
+
+import HsRogue.Map
+
+import Rogue.Array2D.Boxed ( replicateArray, Array2D )
+
+
+emptyWallMap :: V2 -> Array2D Tile
+emptyWallMap = replicateArray wallTile
+
+emptyFloorMap :: V2 -> Array2D Tile
+emptyFloorMap = replicateArray floorTile
+```
+
+Let's start with the basics: we'll have both sorts of empty (or filled, I suppose) map. We already saw a use for the empty *floor* map, and we'll use it shortly for placing random walls - we'll start with all floor and then place walls. The empty *wall* map is handy for doing the opposite - starting with all the walls and digging out some rooms and corridors.
+
+
+```haskell
+import Rogue.Geometry.Rectangle
+    ( centre
+    , rectangleEdges
+    , rectangleFromDimensions
+    , rectanglesIntersect
+    , Orientation(..)
+    , Rectangle
+    , rectanglePoints'
+    )
+import Rogue.Monad ( MonadRogue )
+import Rogue.Random ( coinFlip, randomPoint, randomV2 )
+import qualified Data.List.NonEmpty as NE
+```
+
+## Map 1: Random walls
+
+Our first goal will be to write a function that takes in some dimensions and a number of walls and places random wall tiles. We'll also add a border around the entire map. Emphasis on the word 'random'. If you're not aware of how randomness works in programming, in short:
+-  You provide some starting value (the seed). Giving the same seed will give the same sequence of random numbers every time. Sometimes you'll want to specify this, but normally it's generated off the current time.
+- This seed value goes into a complicated calculation that generates a state (a big number) for the generator. This is often called the 'generator state'.
+- Every time you want to generate a random number, the generator state is plugged into that complicated calculation. This spits out a random number and a new value for the generator state. Then, you update the generator state to this new value.
+
+It's **not** actually random: however to the human eye, the numbers seem to be completely random.
+
+There's usually two options for doing (pseudo-)randomness in Haskell:
+
+- You can manually keep track of your generator state `g`. You then use **pure** functions that look like `random :: g -> (a, g)` - given a generator state, produce a newly updated generator state and a random `a`.
+- You can use a global variable that keeps track of the generator state for you. As this global variable lives in the `IO` monad, all your functions for doing randomness are **in the IO monad** - they look like `randomM :: IO a`.
+
+`Roguefunctor` does a bit of both. There *is* a global-ish random number generator, but instead of being in the `IO` monad it is stored in the library in the **RogueT** monad transformer. Remember back to `withWindow` where we said that the "main loop" parameter was not `IO` but instead something else with `IO` in it? This is why - we keep a separate state for things like the RNG state. The `RogueT` transformer implements the `MonadRogue` typeclass,
+
+
+## Map 2: I am a dwarf and I'm digging some rooms and corridors
+
+## Map 3: An actual...dungeon?
+
+# Wrapping up
 
 ```haskell
 module HsRogue.MapGen
@@ -211,12 +289,6 @@ import Rogue.Geometry.Rectangle
 import Rogue.Monad ( MonadRogue )
 import Rogue.Random ( coinFlip, randomPoint, randomV2 )
 import qualified Data.List.NonEmpty as NE
-
-emptyWallMap :: V2 -> Array2D Tile
-emptyWallMap = replicateArray wallTile
-
-emptyFloorMap :: V2 -> Array2D Tile
-emptyFloorMap = replicateArray floorTile
 
 emptyRandomMap :: MonadRogue m => Int -> V2 -> m (Array2D Tile)
 emptyRandomMap numberOfWalls size = do
@@ -303,15 +375,5 @@ testMap =
   . digRoom (rectangleFromDimensions (V2 35 15) (V2 10 15))
   . digRoom (rectangleFromDimensions (V2 20 15) (V2 10 15))
   . emptyWallMap
-```
-
-```haskell
-type GameMonad m = (MonadRogue m, MonadIO m, MonadState WorldState m)
-
-data WorldState = WorldState
-  { playerPosition :: V2
-  , tileMap :: Tiles
-  , pendingQuit :: Bool
-  }
 ```
 
