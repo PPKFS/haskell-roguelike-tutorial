@@ -1,8 +1,8 @@
 ---
 author: ["Avery"]
 title: "Haskell Roguelike Tutorial Part 2 - Making a Map"
-date: "2025-07-09"
-modified: "2025-07-09"
+date: "2025-07-22"
+modified: "2025-07-22"
 description: "Back for Part 2, this part introduces a proper map structure that we can move around in. Then we make a couple of very simple maps; one with random walls and one with rooms and corridors."
 summary: "Part 2: Making some maps with rooms and corridors."
 tags: ["roguelike", "tutorial", "projects", "haskell"]
@@ -10,7 +10,7 @@ categories: ["haskell"]
 series: ["roguelike-tutorial"]
 ShowToc: true
 TocOpen: true
-draft: true
+draft: false
 weight: 1
 social:
   bluesky: "ppkfs@bsky.social"
@@ -369,7 +369,7 @@ digVerticalTunnel ::
 digVerticalTunnel p len x = x //@ tunnelTiles Vertical p len
 ```
 
-And we'll test it with a very simple map: 2 rooms, joined by a corridor.
+And we'll test it with a very simple map: 2 rooms, joined by a corridor. As our generators are just functions that go `Array2D Tile -> Array2D Tile`, we can easily combine them with function composition.
 
 ```haskell
 testMap :: V2 -> Array2D Tile
@@ -445,7 +445,9 @@ roomsAndCorridorsMap maxRooms minSize maxSize mapSize@(V2 w h) = do
           _ -> return sofar
 ```
 
-Finally we do this bit:
+`coinFlip` is another handy function from the `Rogue.Random` module for generating a random boolean.
+
+Finally we can combine it all together: we fold over the maximum number of rooms, ignoring the actual number, and build up the accumulator.
 
 ```haskell
 roomsAndCorridorsMap maxRooms minSize maxSize mapSize@(V2 w h) = do
@@ -475,7 +477,7 @@ INSERT SCREENSHOT HERE
 
 ## Dungeons aren't great if you can walk through the wall...
 
-Okay, we're missing one major thing: the player can walk through walls. That won't do, so let's make sure to adjust that.
+Okay, we're missing one final major thing: the player can walk through walls. That won't do, so let's make sure to adjust that.
 
 ```haskell
 runLoop :: GameMonad m => m ()
@@ -492,5 +494,18 @@ runLoop = do
           _ -> return ()
 ```
 
-All we need to do now is to look ahead at the tile we plan to move to and see if it's walkable; if it is, then we use a pattern guard to simplify `if walkable t then...`
+All we need to do now is to look ahead at the tile we plan to move to and see if it's walkable; if it is, then we use a pattern guard to simplify `if walkable t then...`.
+
+Yeah, having to write out `modify (\worldState -> worldState ...)` every time is getting kind of annoying and it's only going to get more annoying later. We'll rip that plaster off in the second half of the next part.
+
 # Wrapping up
+
+This was a pretty hefty part, but we covered a lot of cool stuff. It's also probably going to be the last longform part for a while - I'm realising that if I ever want to finish this, I'm going to need to write less than 3000+ words (excluding code samples!) for every single post. I'll try to avoid dumping code and going "well it's obvious"!
+
+The code is available at the accompaying GitHub repo [here](https://github.com/PPKFS/roguelike-tutorial-parts/).
+
+Hopefully this was understandable - any feedback is greatly appreciated. You can find me on the various functional programming/roguelike Discords as `ppkfs` and on Bluesky as `@ppkfs.bsky.social`.
+
+Feedback is greatly appreciated! Feel free to reach out with any questions or suggestions.
+
+Part 3 will be in 2 parts and we'll cover project architecture kinda stuff and finally present a solution to the annoyance of nested record updates. Should be up soon!
