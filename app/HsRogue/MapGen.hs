@@ -4,8 +4,6 @@ module HsRogue.MapGen
   , roomsAndCorridorsMap
   , digRooms
   , digRoom
-  , digCorridors
-  , PlannedCorridor(..)
   , digHorizontalTunnel
   , digVerticalTunnel
 
@@ -75,45 +73,35 @@ digVerticalTunnel ::
   -> Array2D Tile
 digVerticalTunnel p len x = x //@ tunnelTiles Vertical p len
 
-data PlannedCorridor = HorizontalCorridor V2 Int | VerticalCorridor V2 Int
-
-digCorridors :: [PlannedCorridor] -> Array2D Tile -> Array2D Tile
-digCorridors corridors tiles =
-  let corridorTiles = \case
-        HorizontalCorridor p len -> tunnelTiles Horizontal p len
-        VerticalCorridor p len -> tunnelTiles Vertical p len
-  in tiles //@ mconcat (map corridorTiles corridors)
-
 roomsAndCorridorsMap :: MonadRogue m => Int -> Int -> Int -> V2 -> m (Array2D Tile, NonEmpty Rectangle)
 roomsAndCorridorsMap maxRooms minSize maxSize mapSize@(V2 w h) = do
+  let makeOneRandomRoom = do
+        dims@(V2 rW rH) <- randomV2 (V2 minSize minSize) (V2 maxSize maxSize)
+        pos <- randomV2 (V2 1 1) (V2 (w - rW - 2) (h - rH - 2))
+        return $ rectangleFromDimensions pos dims
+      makeRoomAndCorridor sofar@(existingRooms, existingCorridors) = do
+        room <- makeOneRandomRoom
+        let isOk = not $ any (rectanglesIntersect room) existingRooms
 
-  (allRooms, allCorridors) <- foldM (\acc@(existingRooms, existingCorridors) _ -> do
-    room <- makeOneRandomRoom
-    let isOk = not $ any (rectanglesIntersect room) existingRooms
+        case (isOk, existingRooms) of
+          (True, lastRoom:_) -> do
+            let V2 nX nY = centre room
+                oldCentre@(V2 oX oY) = centre lastRoom
+            digHorizontal <- coinFlip
 
-    case (isOk, existingRooms) of
-      (True, lastRoom:_) -> do
-        let V2 nX nY = centre room
-            oldCentre@(V2 oX oY) = centre lastRoom
-        digHorizontal <- coinFlip
+            let twoCorridors = if digHorizontal
+                  then [tunnelTiles Horizontal oldCentre (nX - oX), tunnelTiles Vertical (V2 nX oY) (nY - oY)]
+                  else [tunnelTiles Vertical oldCentre (nY - oY), tunnelTiles Horizontal (V2 oX nY) (nX - oX)]
 
-        let twoCorridors = if digHorizontal
-              then [HorizontalCorridor oldCentre (nX - oX), VerticalCorridor (V2 nX oY) (nY - oY)]
-              else [VerticalCorridor oldCentre (nY - oY), HorizontalCorridor (V2 oX nY) (nX - oX)]
+            return (room:existingRooms, twoCorridors <> existingCorridors)
+          (True, []) -> return (room:existingRooms, existingCorridors)
 
-        return (room:existingRooms, twoCorridors <> existingCorridors)
-      (True, []) -> return (room:existingRooms, existingCorridors)
+          _ -> return sofar
 
-      _ -> return acc
-    ) ([], []) [1..maxRooms]
-  let mapWithDugRooms = digCorridors allCorridors . digRooms allRooms $ emptyWallMap mapSize
-  return (mapWithDugRooms, fromMaybe (error "room generator made 0 rooms") $ NE.nonEmpty allRooms)
-
-  where
-    makeOneRandomRoom = do
-      dims@(V2 rW rH) <- randomV2 (V2 minSize minSize) (V2 maxSize maxSize)
-      pos <- randomV2 (V2 1 1) (V2 (w - rW - 2) (h - rH - 2))
-      return $ rectangleFromDimensions pos dims
+  (allRooms, allCorridors) <- foldM (\acc _ -> makeRoomAndCorridor acc) ([], []) [1..maxRooms]
+  let mapWithDugRooms = digRooms allRooms $ emptyWallMap mapSize
+      mapAllDug = mapWithDugRooms //@ mconcat allCorridors
+  return (mapAllDug, fromMaybe (error "room generator made 0 rooms") $ NE.nonEmpty allRooms)
 
 testMap :: V2 -> Array2D Tile
 testMap =
