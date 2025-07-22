@@ -11,5 +11,9 @@ packages:
 
 source-repository-package
   type: git
+  location: https://github.com/ppkfs/bearlibterminal-hs.git
+  tag: 1dd473fff7796949c53d0b2fb3a89df9dc37f958
+source-repository-package
+  type: git
   location: https://github.com/bch29/voronoi.git
   tag: 51c4185c1b2f2406ffb63db8748c548dd6e147b7

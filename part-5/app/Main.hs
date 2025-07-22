@@ -181,7 +181,7 @@ monstersThink = do
         case behaviour monsterStuff of
           AttackPlayer -> do
             m <- use #tileMap
-            r <- findPath m (actor ^. objectPosition) playerLocation
+            let r = findPath m (actor ^. objectPosition) playerLocation
             case r of
               Just (nextStep:_:_) ->
                 when (positionAllowsMovement m nextStep) $
