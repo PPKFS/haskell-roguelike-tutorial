@@ -315,7 +315,7 @@ initGame = do
       }
 ```
 
-INSERT A SCREENSHOT HERE
+![](part2-1.png)
 
 ## Map 2: I am a dwarf and I'm digging some rooms and corridors
 
@@ -382,7 +382,7 @@ testMap =
 
 If you update `initMap` to use `testMap`, you'll get the following:
 
-INSERT SCREENSHOT HERE
+![](part2-2.png)
 
 We're almost done: let's place these rooms randomly.
 
