@@ -75,7 +75,6 @@ movementKeys = M.fromList
 asMovement :: Keycode -> Maybe Direction
 asMovement k = k `M.lookup` movementKeys
 
--- given a direction and a point, calculate the new point that is 1 tile in that direction.
 calculateNewLocation :: Direction -> V2 -> V2
 calculateNewLocation dir (V2 x y) = case dir of
   LeftDir -> V2 (x-1) y
