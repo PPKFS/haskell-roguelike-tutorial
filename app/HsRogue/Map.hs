@@ -10,7 +10,6 @@ module HsRogue.Map
 import HsRogue.Prelude
 import Rogue.Array2D.Boxed ( Array2D )
 import Rogue.Colour ( Colour )
-import Rogue.Tilemap ( TileVisibility(..), VisibilityMap(..) )
 
 import HsRogue.Renderable
 
@@ -33,9 +32,3 @@ data Tiles = Tiles
   { tiles :: Array2D Tile
   , defaultBackgroundColour :: Colour
   } deriving (Generic, Show)
-
-instance TileVisibility Tile where
-  visibility = walkable
-
-instance VisibilityMap Tiles where
-  positionBlocksVisibility = positionBlocksVisibility . tiles

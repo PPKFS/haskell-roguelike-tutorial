@@ -80,25 +80,26 @@ roomsAndCorridorsMap maxRooms minSize maxSize mapSize@(V2 w h) = do
         dims@(V2 rW rH) <- randomV2 (V2 minSize minSize) (V2 maxSize maxSize)
         pos <- randomV2 (V2 1 1) (V2 (w - rW - 2) (h - rH - 2))
         return $ rectangleFromDimensions pos dims
-  (allRooms, allCorridors) <- foldM (\acc@(existingRooms, existingCorridors) _ -> do
-    room <- makeOneRandomRoom
-    let isOk = not $ any (rectanglesIntersect room) existingRooms
+      makeRoomAndCorridor sofar@(existingRooms, existingCorridors) = do
+        room <- makeOneRandomRoom
+        let isOk = not $ any (rectanglesIntersect room) existingRooms
 
-    case (isOk, existingRooms) of
-      (True, lastRoom:_) -> do
-        let V2 nX nY = centre room
-            oldCentre@(V2 oX oY) = centre lastRoom
-        digHorizontal <- coinFlip
+        case (isOk, existingRooms) of
+          (True, lastRoom:_) -> do
+            let V2 nX nY = centre room
+                oldCentre@(V2 oX oY) = centre lastRoom
+            digHorizontal <- coinFlip
 
-        let twoCorridors = if digHorizontal
-              then [tunnelTiles Horizontal oldCentre (nX - oX), tunnelTiles Vertical (V2 nX oY) (nY - oY)]
-              else [tunnelTiles Vertical oldCentre (nY - oY), tunnelTiles Horizontal (V2 oX nY) (nX - oX)]
+            let twoCorridors = if digHorizontal
+                  then [tunnelTiles Horizontal oldCentre (nX - oX), tunnelTiles Vertical (V2 nX oY) (nY - oY)]
+                  else [tunnelTiles Vertical oldCentre (nY - oY), tunnelTiles Horizontal (V2 oX nY) (nX - oX)]
 
-        return (room:existingRooms, twoCorridors <> existingCorridors)
-      (True, []) -> return (room:existingRooms, existingCorridors)
+            return (room:existingRooms, twoCorridors <> existingCorridors)
+          (True, []) -> return (room:existingRooms, existingCorridors)
 
-      _ -> return acc
-    ) ([], []) [1..maxRooms]
+          _ -> return sofar
+
+  (allRooms, allCorridors) <- foldM (\acc _ -> makeRoomAndCorridor acc) ([], []) [1..maxRooms]
   let mapWithDugRooms = digRooms allRooms $ emptyWallMap mapSize
       mapAllDug = mapWithDugRooms //@ mconcat allCorridors
   return (mapAllDug, fromMaybe (error "room generator made 0 rooms") $ NE.nonEmpty allRooms)
