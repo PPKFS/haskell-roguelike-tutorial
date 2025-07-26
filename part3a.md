@@ -1,10 +1,10 @@
 ---
 author: ["Avery"]
-title: "Haskell Roguelike Tutorial Part 3a - Adding Objects"
-date: "2025-04-18"
-modified: "2025-06-19"
-description: "This is the first 'proper' tutorial post; there's a walkthrough of the window opening example before jumping in with moving an @ around the screen."
-summary: "Walking through the window opening code and drawing and moving a character."
+title: "Haskell Roguelike Tutorial Part 3 - Objects, Actors, and Lenses"
+date: "2025-07-23"
+modified: "2025-07-23"
+description: "In this part, we design a proper architecture for our project: we turn the player into an object (an actor, specifically) and then briefly introduce optics as a way to avoid the hell of nested record updates."
+summary: "Adding a proper object and actor model and introducing the optics library."
 tags: ["roguelike", "tutorial", "projects", "haskell"]
 categories: ["haskell"]
 series: ["roguelike-tutorial"]
@@ -15,6 +15,10 @@ weight: 1
 social:
   bluesky: "ppkfs@bsky.social"
 ---
+
+**WORKING DRAFT**
+
+Welcome back to part 3 of the Haskell roguelike tutorial! In the [previous part](https://ppkfs.github.io/posts/roguelike-tutorial/part2/) we added some modules to make tilemaps and finished up with a simple dungeon (and collision!). In this part, we're going to make a proper model of objects (such as items, or doors, or traps) and actors (like the player and enemies).
 
 Map:
 
